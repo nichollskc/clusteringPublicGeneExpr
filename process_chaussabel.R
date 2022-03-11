@@ -1,4 +1,8 @@
+library(dplyr)
+library(ggplot2)
 library(stringr)
+library(tibble)
+library(tidyr)
 
 # Function to allow named capture groups
 re.capture = function(pattern, string, ...) {
@@ -62,7 +66,7 @@ extract_sample_id <- function(sample_id) {
         sample_info = try_extract_sample_info(sample_id, "^(?i)INF(?<pat_num>[0-9]+)(?<AB>A|B|).*STAPH(?<extra>)", "InfSTAPH")
     }
     if (is.null(sample_info)) {
-        sample_info = try_extract_sample_info(sample_id, "^(?i)IDDM.(?<pat_num>[0-9]+)(?<extra>)[ \\.]?(?<AB>A|B)", "T1D")
+        sample_info = try_extract_sample_info(sample_id, "^(?i)IDDM[\\.]?(?<pat_num>[0-9]*)(?<extra>)[ \\.]?(?<AB>A|B)", "T1D")
     }
     if (is.null(sample_info)) {
         sample_info = try_extract_sample_info(sample_id, "^X?003.*ACC[\\.-](?<pat_num>[0-9]+)(?<extra>F|)[\\._](?:U133)?(?<AB>B|)", "MEL")
@@ -77,11 +81,12 @@ extract_sample_id <- function(sample_id) {
     return(sample_info)
 }
 
-add_detailed_sample_info <- function(sample_df, col_name) {
-    res = lapply(sample_df[, col_name], extract_sample_id)
+add_detailed_sample_info <- function(sample_df, full_ids) {
+    res = lapply(full_ids, extract_sample_id)
     df = data.frame(do.call(rbind, res))
     colnames(df) = c("old_sample_id", "disease", "patient_num", "extra", "AorB")
-    df$neat_sample_id = paste0(df$disease, "_", df$patient_num, "_", df$extra, "_", df$AorB)
+    df$dataset = "CHA"
+    df$neat_sample_id = paste0(df$disease, "_", df$dataset, "_", df$patient_num, "_", df$extra, "_", df$AorB)
 
     #n_occur <- data.frame(table(df$neat_sample_id))
     #df[df$neat_sample_id %in% n_occur[n_occur$Freq > 1, "Var1"], ]
@@ -90,28 +95,81 @@ add_detailed_sample_info <- function(sample_df, col_name) {
 }
 
 full_sample_info = read.csv("data/datasets/chaussabel/sample_info.txt", sep='\t')
-full_sample_info = add_detailed_sample_info(full_sample_info, "Scan.Name")
+full_sample_info = add_detailed_sample_info(full_sample_info, full_sample_info[, "Scan.Name"])
 
 dfA = read.csv("data/datasets/chaussabel/E-GEOD-11907-processed-data-1673830054.txt",
                sep='\t', row.names=1)
-dfA = apply(dfA, MARGIN=1:2, FUN=as.numeric)
 dfB = read.csv("data/datasets/chaussabel/E-GEOD-11907-processed-data-1673830055.txt",
                sep='\t', row.names=1)
-dfB = apply(dfB, MARGIN=1:2, FUN=as.numeric)
 
 processed_samples = rbind(data.frame(column_name = colnames(dfA),
                                      file = "E-GEOD-11907-processed-data-1673830054.txt"),
                           data.frame(column_name = colnames(dfB),
                                      file = "E-GEOD-11907-processed-data-1673830055.txt")) %>%
     filter(!grepl("[.]1$", column_name))
-processed_samples = add_detailed_sample_info(processed_samples, "column_name")
+processed_samples = add_detailed_sample_info(processed_samples, processed_samples[, "column_name"])
 
 # There are just 6 samples not found in one of the processed files
 combined = merge(processed_samples, full_sample_info, by="neat_sample_id")
+write.table(combined, "data/datasets/chaussabel/neat_sample_info.txt")
 
-values = df[rownames(df) %in% yme, sample_info$df_colname]
-values = apply(values, MARGIN=1:2, FUN=as.numeric)
+read_gene_list <- function(gene_list_file) {
+    genes_table = read.table(gene_list_file, header=1, sep=',')
+    return (genes_table$SYMBOL)
+}
 
-hc_values = df[rownames(df) %in% found$Probe.Set.ID, sample_info[sample_info$disease == "HC", ]$df_colname]
-hc_values = apply(hc_values, MARGIN=1:2, FUN=as.numeric)
-hc_median = apply(hc_values, MARGIN=1, FUN=median)
+std <- function(x) sd(x)/sqrt(length(x))
+
+calculate_ranked_data_chaussabel <- function(genelist, processed_data) {
+    dir_genelists = "~/rds/rds-cew54-basis/People/KATH/publicGeneExpr/"
+    #dir_genelists = "~/docs/PhD/UncertaintyClustering/GeneExpression/"
+    genelist_file = paste0(dir_genelists, "data/pathways/processed/", genelist, ".csv")
+    gene_list <- read_gene_list(genelist_file)
+
+    processed_data = processed_data[, c(FALSE, TRUE)]
+    processed_data$Probe.Set.ID = rownames(processed_data)
+    colnames(processed_data) = gsub("\\.1", "", colnames(processed_data))
+    processed_data = processed_data[-c(1), ]
+
+    affy = read.csv("data/datasets/HG-U133_Plus_2.na36.annot.csv", skip=25)
+    print(paste0("Total gene list length: ", length(gene_list)))
+    probes_in_list <- affy[affy$Gene.Symbol %in% gene_list, c("Gene.Symbol", "Probe.Set.ID")]
+    probe_values_in_list = merge(processed_data, probes_in_list, by="Probe.Set.ID")
+    print(paste0("Genes also found in dataset: ", length(unique(probe_values_in_list$Gene.Symbol))))
+
+    gene_means = probe_values_in_list %>%
+        select(!starts_with("Probe.Set.ID")) %>%
+        mutate(across(!starts_with("Gene.Symbol"), as.numeric)) %>%
+        mutate(across(!starts_with("Gene.Symbol"), log2)) %>%
+        group_by(Gene.Symbol) %>%
+        summarise(across(!starts_with("Gene.Symbol"), mean)) %>%
+        column_to_rownames(var = "Gene.Symbol") %>%
+        t()
+    colnames(gene_means) = paste0("GENE_", colnames(gene_means))
+    gene_means = add_detailed_sample_info(gene_means, rownames(gene_means))
+    hc_medians = filter(gene_means, disease == "HC") %>% summarise(across(starts_with("GENE_"), median))
+
+    logfc = data.frame(mapply('/', gene_means %>% select(starts_with("GENE_")), hc_medians))
+    logfc = cbind(logfc, select(gene_means, !starts_with("GENE_")))
+    colnames(logfc) = colnames(gene_means)
+    rownames(logfc) = rownames(gene_means)
+
+    to_plot = pivot_longer(logfc, cols=starts_with("GENE_"), names_to="GENE", names_prefix="GENE_")
+    g = ggplot(to_plot, aes(x=GENE, y=value, color=disease))  + geom_point() + facet_wrap("~disease")
+    ggsave("plots/chaussabel.png", g)
+
+    average_logfc_individuals = to_plot %>%
+        select(neat_sample_id, GENE, value) %>%
+        group_by(neat_sample_id) %>%
+        summarise(mean_rank = mean(value),
+                  se_rank = std(value),
+                  .groups="keep") %>%
+        arrange(neat_sample_id)
+
+    return(average_logfc_individuals)
+}
+
+ifn_data = calculate_ranked_data_chaussabel("ifn", dfA)
+write.csv(ifn_data, "data/datasets/chaussabel/ifnA.csv")
+ifn_data = calculate_ranked_data_chaussabel("ifn", dfB)
+write.csv(ifn_data, "data/datasets/chaussabel/ifnB.csv")
