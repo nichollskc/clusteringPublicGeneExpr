@@ -4,6 +4,8 @@ library(stringr)
 library(tibble)
 library(tidyr)
 
+library(vsn)
+
 # Function to allow named capture groups
 re.capture = function(pattern, string, ...) {
     rex = list(src=string,
@@ -125,7 +127,30 @@ read_gene_list <- function(gene_list_file) {
 
 std <- function(x) sd(x)/sqrt(length(x))
 
-calculate_ranked_data_chaussabel <- function(genelist, processed_data) {
+calculate_average_logfc <- function(gene_means, name) {
+    hc_medians = filter(gene_means, disease == "HC") %>% summarise(across(starts_with("GENE_"), median))
+
+    logfc = data.frame(mapply('-', gene_means %>% select(starts_with("GENE_")), hc_medians))
+    logfc = cbind(logfc, select(gene_means, !starts_with("GENE_")))
+    colnames(logfc) = colnames(gene_means)
+    rownames(logfc) = rownames(gene_means)
+
+    to_plot = pivot_longer(logfc, cols=starts_with("GENE_"), names_to="GENE", names_prefix="GENE_")
+    g = ggplot(to_plot, aes(x=GENE, y=value, color=disease))  + geom_point() + facet_wrap("~disease")
+    ggsave(paste0("plots/chaussabel_", name, ".png"), g)
+
+    average_logfc_individuals = to_plot %>%
+        select(neat_sample_id, GENE, value) %>%
+        group_by(neat_sample_id) %>%
+        summarise(mean_logfc = mean(value),
+                  se_logfc = std(value),
+                  .groups="keep") %>%
+        arrange(neat_sample_id)
+
+    return(average_logfc_individuals)
+}
+
+calculate_ranked_data_chaussabel <- function(genelist, processed_data, name) {
     dir_genelists = "~/rds/rds-cew54-basis/People/KATH/publicGeneExpr/"
     #dir_genelists = "~/docs/PhD/UncertaintyClustering/GeneExpression/"
     genelist_file = paste0(dir_genelists, "data/pathways/processed/", genelist, ".csv")
@@ -150,31 +175,48 @@ calculate_ranked_data_chaussabel <- function(genelist, processed_data) {
         summarise(across(!starts_with("Gene.Symbol"), mean)) %>%
         column_to_rownames(var = "Gene.Symbol") %>%
         t()
-    colnames(gene_means) = paste0("GENE_", colnames(gene_means))
+    gene_names = paste0("GENE_", colnames(gene_means))
+    colnames(gene_means) = gene_names
     gene_means = add_detailed_sample_info(gene_means, rownames(gene_means))
-    hc_medians = filter(gene_means, disease == "HC") %>% summarise(across(starts_with("GENE_"), median))
-
-    logfc = data.frame(mapply('/', gene_means %>% select(starts_with("GENE_")), hc_medians))
-    logfc = cbind(logfc, select(gene_means, !starts_with("GENE_")))
-    colnames(logfc) = colnames(gene_means)
-    rownames(logfc) = rownames(gene_means)
-
-    to_plot = pivot_longer(logfc, cols=starts_with("GENE_"), names_to="GENE", names_prefix="GENE_")
+    to_plot = pivot_longer(gene_means, cols=starts_with("GENE_"), names_to="GENE", names_prefix="GENE_")
     g = ggplot(to_plot, aes(x=GENE, y=value, color=disease))  + geom_point() + facet_wrap("~disease")
-    ggsave("plots/chaussabel.png", g)
+    ggsave(paste0("plots/chaussabel_logtransformed_", name, ".png"), g)
 
-    average_logfc_individuals = to_plot %>%
-        select(neat_sample_id, GENE, value) %>%
-        group_by(neat_sample_id) %>%
-        summarise(mean_rank = mean(value),
-                  se_rank = std(value),
-                  .groups="keep") %>%
-        arrange(neat_sample_id)
+    g = meanSdPlot(gene_means %>% select(starts_with("GENE_")) %>% mutate(across(everything(), function(x) 2^x)) %>% as.matrix())$gg
+    ggsave(paste0("plots/chaussabel_mean_variance_", name, ".png"), g)
+
+#    gene_means_values_vsn = gene_means %>% select(starts_with("GENE_")) %>% as.matrix() %>% vsn2()
+    gene_means_values_vsn = gene_means %>% select(starts_with("GENE_")) %>% mutate(across(everything(), function(x) 2^x)) %>% as.matrix() %>% vsn2() %>% as.matrix() %>% as.data.frame() %>% mutate(across(everything(), log2)) %>% as.matrix()
+    g = meanSdPlot(gene_means_values_vsn)$gg
+    ggsave(paste0("plots/chaussabel_mean_variance_vsn_", name, ".png"), g)
+
+    gene_means_vsn = gene_means
+    gene_means_vsn[, gene_names] = as.matrix(gene_means_values_vsn)
+    to_plot = pivot_longer(gene_means_vsn, cols=starts_with("GENE_"), names_to="GENE", names_prefix="GENE_")
+    g = ggplot(to_plot, aes(x=GENE, y=value, color=disease))  + geom_point() + facet_wrap("~disease")
+    ggsave(paste0("plots/chaussabel_logtransformed_vsn_", name, ".png"), g)
+
+    average_logfc_individuals = calculate_average_logfc(gene_means, name)
+    write.csv(average_logfc_individuals, paste0("data/datasets/chaussabel/", name, ".csv"))
+    average_logfc_individuals_vsn = calculate_average_logfc(gene_means_vsn, paste0(name, "_vsn"))
+    write.csv(average_logfc_individuals_vsn, paste0("data/datasets/chaussabel/", name, "_vsn.csv"))
 
     return(average_logfc_individuals)
 }
 
-ifn_data = calculate_ranked_data_chaussabel("ifn", dfA)
-write.csv(ifn_data, "data/datasets/chaussabel/ifnA.csv")
-ifn_data = calculate_ranked_data_chaussabel("ifn", dfB)
-write.csv(ifn_data, "data/datasets/chaussabel/ifnB.csv")
+calculate_ranked_data_chaussabel("ifn", dfA, "ifn_A")
+calculate_ranked_data_chaussabel("ifn", dfB, "ifn_B")
+
+compare_datasets <- function(suffix="") {
+    ifnA = read.csv(paste0("data/datasets/chaussabel/ifn_A", suffix, ".csv"))
+    ifnB = read.csv(paste0("data/datasets/chaussabel/ifn_B", suffix, ".csv"))
+    ifnA$dataset = "CHA_A"
+    ifnB$dataset = "CHA_B"
+
+    both = rbind(ifnA, ifnB)
+    both$disease = sapply(both$neat_sample_id, function(x) str_split(string=x, pattern="_")[[1]][1])
+    g = ggplot(both, aes(x=dataset, y=mean_logfc, colour=disease)) + geom_point() + facet_wrap("~ disease") + geom_boxplot()
+    ggsave(paste0("plots/chaussabel_compared", suffix, ".png"), g)
+    g = ggplot(both, aes(x=dataset, y=se_logfc, colour=disease)) + geom_point() + facet_wrap("~ disease") + geom_boxplot()
+    ggsave(paste0("plots/chaussabel_compared_se", suffix, ".png"), g)
+}
