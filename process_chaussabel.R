@@ -86,7 +86,8 @@ add_detailed_sample_info <- function(sample_df, full_ids) {
     df = data.frame(do.call(rbind, res))
     colnames(df) = c("old_sample_id", "disease", "patient_num", "extra", "AorB")
     df$dataset = "CHA"
-    df$neat_sample_id = paste0(df$disease, "_", df$dataset, "_", df$patient_num, "_", df$extra, "_", df$AorB)
+    df$patient_id = paste0(df$disease, "_", df$dataset, "_", df$patient_num)
+    df$neat_sample_id = paste0(df$patient_id, "_", df$extra, "_", df$AorB)
 
     #n_occur <- data.frame(table(df$neat_sample_id))
     #df[df$neat_sample_id %in% n_occur[n_occur$Freq > 1, "Var1"], ]
@@ -96,6 +97,8 @@ add_detailed_sample_info <- function(sample_df, full_ids) {
 
 full_sample_info = read.csv("data/datasets/chaussabel/sample_info.txt", sep='\t')
 full_sample_info = add_detailed_sample_info(full_sample_info, full_sample_info[, "Scan.Name"])
+full_sample_info$dataset = ifelse(full_sample_info$Derived.Array.Data.Matrix.File == "E-GEOD-11907-processed-data-1673830054.txt", "CHA", "CHB")
+full_sample_info$neat_sample_id = paste0(full_sample_info$disease, "_", full_sample_info$dataset, "_", full_sample_info$patient_num, "_", full_sample_info$extra)
 
 dfA = read.csv("data/datasets/chaussabel/E-GEOD-11907-processed-data-1673830054.txt",
                sep='\t', row.names=1)
@@ -108,6 +111,8 @@ processed_samples = rbind(data.frame(column_name = colnames(dfA),
                                      file = "E-GEOD-11907-processed-data-1673830055.txt")) %>%
     filter(!grepl("[.]1$", column_name))
 processed_samples = add_detailed_sample_info(processed_samples, processed_samples[, "column_name"])
+processed_samples$dataset = ifelse(processed_samples$file == "E-GEOD-11907-processed-data-1673830054.txt", "CHA", "CHB")
+processed_samples$neat_sample_id = paste0(processed_samples$disease, "_", processed_samples$dataset, "_", processed_samples$patient_num, "_", processed_samples$extra)
 
 # There are just 6 samples not found in one of the processed files
 combined = merge(processed_samples, full_sample_info, by="neat_sample_id")

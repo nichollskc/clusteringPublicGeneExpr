@@ -11,6 +11,12 @@ rule fetch_smith_sample_info:
     shell:
         "wget -O {output} https://www.ebi.ac.uk/arrayexpress/files/E-MTAB-145/E-MTAB-145.sdrf.txt"
 
+rule fetch_smith_array:
+    output:
+        "data/datasets/smith/A-MEXP-1152.adf.txt",
+    shell:
+        "wget -O {output} https://www.ebi.ac.uk/arrayexpress/files/A-MEXP-1152/A-MEXP-1152.adf.txt"
+
 rule fetch_chaussabel:
     output:
         "data/datasets/chaussabel/processed.zip",
