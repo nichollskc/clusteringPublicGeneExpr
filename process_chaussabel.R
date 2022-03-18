@@ -14,7 +14,7 @@ re.capture = function(pattern, string, ...) {
 
     for (.name in attr(rex$result, 'capture.name')) {
         rex$names[[.name]] = substr(rex$src,
-                                    attr(rex$result, 'capture.start')[,.name], 
+                                    attr(rex$result, 'capture.start')[,.name],
                                     attr(rex$result, 'capture.start')[,.name]
                                     + attr(rex$result, 'capture.length')[,.name]
                                     - 1)
@@ -97,28 +97,13 @@ add_detailed_sample_info <- function(sample_df, full_ids) {
     return(cbind(sample_df, df))
 }
 
-full_sample_info = read.csv("data/datasets/chaussabel/sample_info.txt", sep='\t')
-full_sample_info = add_detailed_sample_info(full_sample_info, full_sample_info[, "Scan.Name"])
-full_sample_info$dataset = ifelse(full_sample_info$Derived.Array.Data.Matrix.File == "E-GEOD-11907-processed-data-1673830054.txt", "CHA", "CHB")
-full_sample_info$neat_sample_id = paste0(full_sample_info$disease, "_", full_sample_info$dataset, "_", full_sample_info$patient_num, "_", full_sample_info$extra)
-
-dfA = read.csv("data/datasets/chaussabel/E-GEOD-11907-processed-data-1673830054.txt",
-               sep='\t', row.names=1)
-dfB = read.csv("data/datasets/chaussabel/E-GEOD-11907-processed-data-1673830055.txt",
-               sep='\t', row.names=1)
-
-processed_samples = rbind(data.frame(column_name = colnames(dfA),
-                                     file = "E-GEOD-11907-processed-data-1673830054.txt"),
-                          data.frame(column_name = colnames(dfB),
-                                     file = "E-GEOD-11907-processed-data-1673830055.txt")) %>%
-    filter(!grepl("[.]1$", column_name))
-processed_samples = add_detailed_sample_info(processed_samples, processed_samples[, "column_name"])
-processed_samples$dataset = ifelse(processed_samples$file == "E-GEOD-11907-processed-data-1673830054.txt", "CHA", "CHB")
-processed_samples$neat_sample_id = paste0(processed_samples$disease, "_", processed_samples$dataset, "_", processed_samples$patient_num, "_", processed_samples$extra)
-
-# There are just 6 samples not found in one of the processed files
-combined = merge(processed_samples, full_sample_info, by="neat_sample_id")
-write.table(combined, "data/datasets/chaussabel/neat_sample_info.txt")
+fix_chaussabel_columns <- function(processed_data) {
+    processed_data = processed_data[, c(FALSE, TRUE)]
+    colnames(processed_data) = gsub("\\.1", "", colnames(processed_data))
+    processed_data = processed_data[-c(1), ]
+    processed_data = processed_data %>% mutate(across(everything(), as.numeric))
+    return (processed_data)
+}
 
 read_gene_list <- function(gene_list_file) {
     genes_table = read.table(gene_list_file, header=1, sep=',')
@@ -150,16 +135,31 @@ calculate_average_logfc <- function(gene_means, name) {
     return(average_logfc_individuals)
 }
 
+apply_vsn_transformation <- function(processed_data, name) {
+    g = meanSdPlot(as.matrix(processed_data %>% mutate(across(everything(), function(x) log2(x))) ))$gg
+    ggsave(paste0("plots/chaussabel_mean_variance_ranks_log_", name, ".png"), g)
+    g = meanSdPlot(as.matrix(processed_data %>% mutate(across(everything(), function(x) log2(x))) ), ranks=FALSE)$gg
+    ggsave(paste0("plots/chaussabel_mean_variance_log_", name, ".png"), g)
+
+    after_vsn = vsn2(as.matrix(processed_data))
+
+    g = meanSdPlot(after_vsn)$gg
+    ggsave(paste0("plots/chaussabel_mean_variance_ranks_vsn_", name, ".png"), g)
+    g = meanSdPlot(after_vsn, ranks=FALSE)$gg
+    ggsave(paste0("plots/chaussabel_mean_variance_vsn_", name, ".png"), g)
+
+    df = data.frame(as.matrix(after_vsn))
+    colnames(df) = colnames(processed_data)
+    rownames(df) = rownames(processed_data)
+    return (df)
+}
+
 calculate_ranked_data_chaussabel <- function(genelist, processed_data, name) {
     dir_genelists = "~/rds/rds-cew54-basis/People/KATH/publicGeneExpr/"
-    #dir_genelists = "~/docs/PhD/UncertaintyClustering/GeneExpression/"
     genelist_file = paste0(dir_genelists, "data/pathways/processed/", genelist, ".csv")
     gene_list <- read_gene_list(genelist_file)
 
-    processed_data = processed_data[, c(FALSE, TRUE)]
     processed_data$Probe.Set.ID = rownames(processed_data)
-    colnames(processed_data) = gsub("\\.1", "", colnames(processed_data))
-    processed_data = processed_data[-c(1), ]
 
     affy = read.csv("data/datasets/HG-U133_Plus_2.na36.annot.csv", skip=25)
     print(paste0("Total gene list length: ", length(gene_list)))
@@ -182,41 +182,64 @@ calculate_ranked_data_chaussabel <- function(genelist, processed_data, name) {
     g = ggplot(to_plot, aes(x=GENE, y=value, color=disease))  + geom_point() + facet_wrap("~disease")
     ggsave(paste0("plots/chaussabel_logtransformed_", name, ".png"), g)
 
-    g = meanSdPlot(gene_means %>% select(starts_with("GENE_")) %>% mutate(across(everything(), function(x) 2^x)) %>% as.matrix())$gg
-    ggsave(paste0("plots/chaussabel_mean_variance_", name, ".png"), g)
-
-#    gene_means_values_vsn = gene_means %>% select(starts_with("GENE_")) %>% as.matrix() %>% vsn2()
-    gene_means_values_vsn = gene_means %>% select(starts_with("GENE_")) %>% mutate(across(everything(), function(x) 2^x)) %>% as.matrix() %>% vsn2() %>% as.matrix() %>% as.data.frame() %>% mutate(across(everything(), log2)) %>% as.matrix()
-    g = meanSdPlot(gene_means_values_vsn)$gg
-    ggsave(paste0("plots/chaussabel_mean_variance_vsn_", name, ".png"), g)
-
-    gene_means_vsn = gene_means
-    gene_means_vsn[, gene_names] = as.matrix(gene_means_values_vsn)
-    to_plot = pivot_longer(gene_means_vsn, cols=starts_with("GENE_"), names_to="GENE", names_prefix="GENE_")
-    g = ggplot(to_plot, aes(x=GENE, y=value, color=disease))  + geom_point() + facet_wrap("~disease")
-    ggsave(paste0("plots/chaussabel_logtransformed_vsn_", name, ".png"), g)
-
     average_logfc_individuals = calculate_average_logfc(gene_means, name)
     write.csv(average_logfc_individuals, paste0("data/datasets/chaussabel/", name, ".csv"))
-    average_logfc_individuals_vsn = calculate_average_logfc(gene_means_vsn, paste0(name, "_vsn"))
-    write.csv(average_logfc_individuals_vsn, paste0("data/datasets/chaussabel/", name, "_vsn.csv"))
 
     return(average_logfc_individuals)
 }
 
-calculate_ranked_data_chaussabel("ifn", dfA, "ifn_A")
-calculate_ranked_data_chaussabel("ifn", dfB, "ifn_B")
-
 compare_datasets <- function(suffix="") {
     ifnA = read.csv(paste0("data/datasets/chaussabel/ifn_A", suffix, ".csv"))
     ifnB = read.csv(paste0("data/datasets/chaussabel/ifn_B", suffix, ".csv"))
+    ifnSMITH = read.csv(paste0("data/datasets/smith/ifn", suffix, ".csv"))
     ifnA$dataset = "CHA_A"
     ifnB$dataset = "CHA_B"
+    ifnSMITH$dataset = "SMITH"
 
-    both = rbind(ifnA, ifnB)
+    both = rbind(ifnA, ifnB, ifnSMITH)
     both$disease = sapply(both$neat_sample_id, function(x) str_split(string=x, pattern="_")[[1]][1])
     g = ggplot(both, aes(x=dataset, y=mean_logfc, colour=disease)) + geom_point() + facet_wrap("~ disease") + geom_boxplot()
-    ggsave(paste0("plots/chaussabel_compared", suffix, ".png"), g)
+    ggsave(paste0("plots/all_compared", suffix, ".png"), g, width = 7, height = 8, dpi = 300, units = "in")
     g = ggplot(both, aes(x=dataset, y=se_logfc, colour=disease)) + geom_point() + facet_wrap("~ disease") + geom_boxplot()
-    ggsave(paste0("plots/chaussabel_compared_se", suffix, ".png"), g)
+    ggsave(paste0("plots/all_compared_se", suffix, ".png"), g, width = 7, height = 8, dpi = 300, units = "in")
 }
+
+full_sample_info = read.csv("data/datasets/chaussabel/sample_info.txt", sep='\t')
+full_sample_info = add_detailed_sample_info(full_sample_info, full_sample_info[, "Scan.Name"])
+full_sample_info$dataset = ifelse(full_sample_info$Derived.Array.Data.Matrix.File == "E-GEOD-11907-processed-data-1673830054.txt", "CHA", "CHB")
+full_sample_info$neat_sample_id = paste0(full_sample_info$disease, "_", full_sample_info$dataset, "_", full_sample_info$patient_num, "_", full_sample_info$extra)
+
+dfA = read.csv("data/datasets/chaussabel/E-GEOD-11907-processed-data-1673830054.txt",
+               sep='\t', row.names=1)
+dfA = fix_chaussabel_columns(dfA)
+dfB = read.csv("data/datasets/chaussabel/E-GEOD-11907-processed-data-1673830055.txt",
+               sep='\t', row.names=1)
+dfB = fix_chaussabel_columns(dfB)
+
+processed_samples = rbind(data.frame(column_name = colnames(dfA),
+                                     file = "E-GEOD-11907-processed-data-1673830054.txt"),
+                          data.frame(column_name = colnames(dfB),
+                                     file = "E-GEOD-11907-processed-data-1673830055.txt")) %>%
+    filter(!grepl("[.]1$", column_name))
+processed_samples = add_detailed_sample_info(processed_samples, processed_samples[, "column_name"])
+processed_samples$dataset = ifelse(processed_samples$file == "E-GEOD-11907-processed-data-1673830054.txt", "CHA", "CHB")
+processed_samples$neat_sample_id = paste0(processed_samples$disease, "_", processed_samples$dataset, "_", processed_samples$patient_num, "_", processed_samples$extra)
+
+# There are just 6 samples not found in one of the processed files
+combined = merge(processed_samples, full_sample_info, by="neat_sample_id")
+write.table(combined, "data/datasets/chaussabel/neat_sample_info.txt")
+
+dfA_vsn = apply_vsn_transformation(dfA, "A")
+dfB_vsn = apply_vsn_transformation(dfB, "B")
+write.csv(dfA_vsn, "data/datasets/chaussabel/after_vsnA.csv")
+write.csv(dfB_vsn, "data/datasets/chaussabel/after_vsnB.csv")
+#dfA_vsn = read.csv("data/datasets/chaussabel/after_vsnA.csv", row.names=1)
+#dfB_vsn = read.csv("data/datasets/chaussabel/after_vsnB.csv", row.names=1)
+calculate_ranked_data_chaussabel("ifn", dfA_vsn, "ifn_A_vsn")
+calculate_ranked_data_chaussabel("ifn", dfB_vsn, "ifn_B_vsn")
+
+calculate_ranked_data_chaussabel("ifn", dfA, "ifn_A")
+calculate_ranked_data_chaussabel("ifn", dfB, "ifn_B")
+
+#compare_datasets("")
+#compare_datasets("_vsn")
