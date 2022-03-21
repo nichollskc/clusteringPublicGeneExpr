@@ -38,7 +38,8 @@ rule standardise_smith:
 rule fetch_chaussabel:
     output:
         "data/datasets/chaussabel/processed.zip",
-#        "data/datasets/smith/PBMC_norm.txt",
+        "data/datasets/chaussabel/E-GEOD-11907-processed-data-1673830054.txt",
+        "data/datasets/chaussabel/E-GEOD-11907-processed-data-1673830055.txt",
     shell:
         "wget -O {output[0]} https://www.ebi.ac.uk/arrayexpress/files/E-GEOD-11907/E-GEOD-11907.processed.1.zip && unzip {output[0]} -d data/datasets/chaussabel"
 
@@ -54,3 +55,39 @@ rule fetch_affymetrix_translation:
         "data/datasets/HG-U133_Plus_2.na36.annot.csv",
     shell:
         "wget -O tmp.zip http://www.affymetrix.com/Auth/analysis/downloads/na36/ivt/HG-U133_Plus_2.na36.annot.csv.zip && unzip tmp.zip -d data/datasets"
+
+rule fetch_coulson:
+    output:
+        "data/datasets/coulson/ifn_signature.data_matrix.tab",
+    shell:
+        "wget -O tmp.zip https://www.ebi.ac.uk/arrayexpress/files/E-MTAB-1724/E-MTAB-1724.processed.1.zip && unzip tmp.zip -d data/datasets/coulson"
+
+rule fetch_coulson_sample_info:
+    output:
+        "data/datasets/coulson/sample_info.txt",
+    shell:
+        "wget -O {output} https://www.ebi.ac.uk/arrayexpress/files/E-MTAB-1724/E-MTAB-1724.sdrf.txt"
+
+rule fetch_coulson_array_comments:
+    output:
+        "data/datasets/coulson/A-AFFY-168_comments.txt",
+    shell:
+        "wget -O {output} https://www.ebi.ac.uk/arrayexpress/files/A-AFFY-168/A-AFFY-168_comments.txt"
+
+rule fetch_coulson_array:
+    output:
+        "data/datasets/coulson/A-AFFY-168.adf.txt",
+    shell:
+        "wget -O {output} https://www.ebi.ac.uk/arrayexpress/files/A-AFFY-168/A-AFFY-168.adf.txt"
+
+rule standardise_coulson:
+    input:
+        "data/datasets/coulson/HuGene-1_1-st-v1.na36.hg19.probeset.csv",
+        "data/datasets/coulson/sample_info.txt",
+        "data/datasets/coulson/ifn_signature.data_matrix.tab",
+    output:
+        "data/datasets/coulson/sample_info.tsv",
+        "data/datasets/coulson/probe_to_gene.tsv",
+        "data/datasets/coulson/expression.tsv",
+    script:
+        "standardise_coulson.R"
