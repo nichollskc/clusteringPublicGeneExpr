@@ -17,6 +17,24 @@ rule fetch_smith_array:
     shell:
         "wget -O {output} https://www.ebi.ac.uk/arrayexpress/files/A-MEXP-1152/A-MEXP-1152.adf.txt"
 
+rule download_biomart:
+    output:
+        "data/datasets/biomart.Rdata",
+    script:
+        "get_biomart.R"
+
+rule standardise_smith:
+    input:
+        "data/datasets/smith/A-MEXP-1152.adf.txt",
+        "data/datasets/smith/sample_info.txt",
+        "data/datasets/smith/PBMC_norm.txt",
+    output:
+        "data/datasets/smith/sample_info.tsv",
+        "data/datasets/smith/probe_to_gene.tsv",
+        "data/datasets/smith/expression.tsv",
+    script:
+        "standardise_smith.R"
+
 rule fetch_chaussabel:
     output:
         "data/datasets/chaussabel/processed.zip",
