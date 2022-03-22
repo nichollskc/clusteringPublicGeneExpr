@@ -70,7 +70,7 @@ calculate_logfc_signature <- function(genelist_name, expression, full_dataset, s
     write.table(average_logfc_individuals, snakemake@output[["average_logfc"]], sep='\t', col.names=TRUE, row.names=FALSE)
 }
 
-full_dataset = paste0(snakemake@wildcards[["dataset"]], snakemake@wildcards[["extra"]])
+full_dataset = paste0(snakemake@wildcards[["dataset"]], snakemake@wildcards[["normalisation"]])
 
 expression = read.csv(snakemake@input[["expression"]], check.names=FALSE, sep='\t', row.names=NULL)
 sample_info = read.csv(snakemake@input[["sample_info"]], check.names=FALSE, sep='\t', row.names=NULL)
