@@ -1,3 +1,10 @@
+wildcard_constraints:
+    dataset = "\w+",
+
+###############################################################################
+# Smith data                                                                  #
+###############################################################################
+
 rule fetch_smith:
     output:
         "data/datasets/smith/processed.zip",
@@ -34,6 +41,10 @@ rule standardise_smith:
         "data/datasets/smith/expression.tsv",
     script:
         "standardise_smith.R"
+
+###############################################################################
+# Chaussabel data                                                             #
+###############################################################################
 
 rule fetch_chaussabel:
     output:
@@ -72,6 +83,10 @@ rule standardise_chaussabel:
     script:
         "standardise_chaussabel.R"
 
+###############################################################################
+# Coulson data                                                                #
+###############################################################################
+
 rule fetch_coulson:
     output:
         "data/datasets/coulson/ifn_signature.data_matrix.tab",
@@ -107,3 +122,23 @@ rule standardise_coulson:
         "data/datasets/coulson/expression.tsv",
     script:
         "standardise_coulson.R"
+
+###############################################################################
+# Normalisation                                                               #
+###############################################################################
+
+rule apply_vsn:
+    input:
+        "data/datasets/{dataset}/expression.tsv",
+    output:
+        "data/datasets/{dataset}/expression_vsn.tsv",
+    script:
+        "apply_vsn.R"
+
+rule apply_mad:
+    input:
+        "data/datasets/{dataset}/expression_vsn.tsv",
+    output:
+        "data/datasets/{dataset}/expression_vsn_mad.tsv",
+    script:
+        "apply_mad_normalisation.R"
