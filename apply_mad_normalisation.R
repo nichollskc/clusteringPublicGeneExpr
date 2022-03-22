@@ -12,8 +12,10 @@ normalise_sample_to_constant_mad <- function(sample_values) {
 
 filename = snakemake@input[[1]]
 output_file = snakemake@output[[1]]
-vsn_expression = read.csv(filename, row.names=1, check.names=FALSE, sep='\t')
+expression = read.csv(filename, row.names=1, check.names=FALSE, sep='\t')
 
-mad_vsn_expression = vsn_expression %>% mutate(across(everything(), normalise_sample_to_constant_mad))
+mad_expression = expression %>% mutate(across(everything(), normalise_sample_to_constant_mad))
 
-write.table(mad_vsn_expression, output_file, row.names=TRUE, col.names=TRUE, sep='\t')
+mad_expression = cbind(probe_id=rownames(mad_expression),
+                       mad_expression)
+write.table(mad_expression, output_file, row.names=FALSE, col.names=TRUE, sep='\t')

@@ -17,7 +17,7 @@ apply_vsn_transformation <- function(expression, name) {
     unlogged_expression = expression %>% mutate(across(everything(), function(x) 2^x)) %>% as.matrix()
     plot_meansd(unlogged_expression, name, "_raw")
 
-    vsn_expression = vsn2(as.matrix(unlogged_expression))
+    vsn_expression = vsn2(as.matrix(unlogged_expression), subsample=30000)
     plot_meansd(vsn_expression, name, "_vsn")
 
     df = data.frame(as.matrix(vsn_expression))
@@ -32,4 +32,6 @@ output_file = snakemake@output[[1]]
 expression = read.csv(filename, row.names=1, check.names=FALSE, sep='\t')
 
 vsn_expression = apply_vsn_transformation(expression, name)
-write.table(vsn_expression, output_file, row.names=TRUE, col.names=TRUE, sep='\t')
+vsn_expression = cbind(probe_id=rownames(vsn_expression),
+                       vsn_expression)
+write.table(vsn_expression, output_file, row.names=FALSE, col.names=TRUE, sep='\t')

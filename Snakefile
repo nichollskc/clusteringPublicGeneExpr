@@ -1,5 +1,6 @@
 wildcard_constraints:
     dataset = "\w+",
+    normalisation = "\w*",
 
 ###############################################################################
 # Smith data                                                                  #
@@ -137,8 +138,29 @@ rule apply_vsn:
 
 rule apply_mad:
     input:
-        "data/datasets/{dataset}/expression_vsn.tsv",
+        "data/datasets/{dataset}/expression{normalisation}.tsv",
     output:
-        "data/datasets/{dataset}/expression_vsn_mad.tsv",
+        "data/datasets/{dataset}/expression{normalisation}_mad.tsv",
     script:
         "apply_mad_normalisation.R"
+
+rule calc_logfc:
+    input:
+        expression="data/datasets/{dataset}/expression{normalisation}.tsv",
+        sample_info="data/datasets/{dataset}/sample_info.tsv",
+        probe_to_gene="data/datasets/{dataset}/probe_to_gene.tsv",
+    output:
+        gene_means="data/datasets/{dataset}/gene_means{normalisation}-{genelist_name}.tsv",
+        logfc="data/datasets/{dataset}/logfc{normalisation}-{genelist_name}.tsv",
+        average_logfc="data/datasets/{dataset}/average_logfc{normalisation}-{genelist_name}.tsv",
+    script:
+        "calculate_logfc_signature.R"
+
+rule all_signatures:
+    input:
+        expand("data/datasets/{dataset}/average_logfc{normalisation}-{genelist_name}.tsv",
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"],
+               normalisation=["", "_vsn", "_vsn_mad", "_mad"],
+               genelist_name=["ifn", "nk_dipp", "exhaustion_down_wherry",
+                   "cd4_activation_green_30", "cd4_activation_yellow_30",
+                   "cd4_activation_black_30"])
