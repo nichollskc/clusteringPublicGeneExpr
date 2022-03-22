@@ -56,6 +56,22 @@ rule fetch_affymetrix_translation:
     shell:
         "wget -O tmp.zip http://www.affymetrix.com/Auth/analysis/downloads/na36/ivt/HG-U133_Plus_2.na36.annot.csv.zip && unzip tmp.zip -d data/datasets"
 
+rule standardise_chaussabel:
+    input:
+        "data/datasets/chaussabel/E-GEOD-11907-processed-data-1673830054.txt",
+        "data/datasets/chaussabel/E-GEOD-11907-processed-data-1673830055.txt",
+        "data/datasets/chaussabel/sample_info.txt",
+        "data/datasets/chaussabel/HG-U133_Plus_2.na36.annot.csv",
+    output:
+        "data/datasets/chaussabelA/sample_info.tsv",
+        "data/datasets/chaussabelA/probe_to_gene.tsv",
+        "data/datasets/chaussabelA/expression.tsv",
+        "data/datasets/chaussabelB/sample_info.tsv",
+        "data/datasets/chaussabelB/probe_to_gene.tsv",
+        "data/datasets/chaussabelB/expression.tsv",
+    script:
+        "standardise_chaussabel.R"
+
 rule fetch_coulson:
     output:
         "data/datasets/coulson/ifn_signature.data_matrix.tab",
