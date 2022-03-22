@@ -11,20 +11,16 @@ read_gene_list <- function(gene_list_file) {
 std <- function(x) sd(x)/sqrt(length(x))
 
 calculate_average_logfc <- function(gene_means, full_dataset, sample_info, genelist_name) {
-    gene_means_t = gene_means %>%
-        column_to_rownames("gene") %>%
-        t() %>%
-        as.data.frame()
-    hc_medians = gene_means_t %>%
+    hc_medians = gene_means %>%
         rownames_to_column("neat_sample_id") %>%
         inner_join(sample_info, by="neat_sample_id") %>%
         filter(disease == "HC") %>%
         select(where(is.numeric)) %>%
         summarise(across(everything(), median))
 
-    logfc = data.frame(mapply('-', gene_means_t, hc_medians))
-    colnames(logfc) = colnames(gene_means_t)
-    rownames(logfc) = rownames(gene_means_t)
+    logfc = data.frame(mapply('-', gene_means, hc_medians))
+    colnames(logfc) = colnames(gene_means)
+    rownames(logfc) = rownames(gene_means)
     write.table(logfc, snakemake@output[["logfc"]], sep='\t', col.names=TRUE, row.names=FALSE)
 
     logfc_pivoted = pivot_longer(logfc %>% rownames_to_column("neat_sample_id"), !neat_sample_id, names_to="gene")
@@ -77,5 +73,5 @@ calculate_logfc_signature <- function(genelist_name, expression, full_dataset, s
 full_dataset = paste0(snakemake@wildcards[["dataset"]], snakemake@wildcards[["extra"]])
 
 expression = read.csv(snakemake@input[["expression"]], check.names=FALSE, sep='\t', row.names=NULL)
-sample_info = read.csv(snakemake@input[["probe_to_gene"]], check.names=FALSE, sep='\t', row.names=NULL)
+sample_info = read.csv(snakemake@input[["sample_info"]], check.names=FALSE, sep='\t', row.names=NULL)
 calculate_logfc_signature(snakemake@wildcards[["genelist_name"]], expression, full_dataset, sample_info)
