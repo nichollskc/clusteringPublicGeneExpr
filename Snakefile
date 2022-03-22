@@ -163,4 +163,14 @@ rule all_signatures:
                normalisation=["", "_vsn", "_vsn_mad", "_mad"],
                genelist_name=["ifn", "nk_dipp", "exhaustion_down_wherry",
                    "cd4_activation_green_30", "cd4_activation_yellow_30",
-                   "cd4_activation_black_30"])
+                   "cd4_activation_black_30"]),
+
+rule compare_datasets:
+    input:
+        expand("data/datasets/{dataset}/average_logfc{{normalisation}}-{{genelist_name}}.tsv",
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"]),
+    output:
+        "plots/compare_datasets_{normalisation}-{genelist_name}.png",
+        "plots/compare_datasets_se_{normalisation}-{genelist_name}.png",
+    script:
+        "compare_datasets.R"
