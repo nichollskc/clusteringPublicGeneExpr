@@ -1,0 +1,17 @@
+{
+    "__default__" :
+    {
+        "account" : "CWALLACE-SL2-CPU",
+        "time" : "00:30:00",
+        "cpus-per-task" : 1,
+        "partition" : "icelake",
+        "job" : "{rule}",
+        "error" : "logs/{rule}.{wildcards}.out"
+    },
+    "apply_vsn" :
+    {
+        "time" : "01:00:00",
+        "partition" : "skylake-himem",
+        "cpus-per-task" : 32
+    },
+}
