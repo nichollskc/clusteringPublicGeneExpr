@@ -1,3 +1,5 @@
+localrules: find_signature_intersection
+
 wildcard_constraints:
     dataset = "\w+",
     normalisation = "\w*",
@@ -146,6 +148,7 @@ rule apply_mad:
 
 rule calc_logfc:
     input:
+        genelist="data/pathways/processed/{genelist_name}.csv",
         expression="data/datasets/{dataset}/expression{normalisation}.tsv",
         sample_info="data/datasets/{dataset}/sample_info.tsv",
         probe_to_gene="data/datasets/{dataset}/probe_to_gene.tsv",
@@ -174,3 +177,28 @@ rule compare_datasets:
         "plots/compare_datasets_se_{normalisation}-{genelist_name}.png",
     script:
         "compare_datasets.R"
+
+rule all_comparisons:
+    input:
+        expand("plots/compare_datasets_{normalisation}-{genelist_name}.png",
+               normalisation=["", "_vsn", "_vsn_mad", "_mad"],
+               genelist_name=["ifn", "nk_dipp", "exhaustion_down_wherry",
+                   "cd4_activation_green_30", "cd4_activation_yellow_30",
+                   "cd4_activation_black_30"]),
+
+rule find_signature_intersection:
+    input:
+        expand("data/datasets/{dataset}/logfc-{{genelist_name}}.tsv",
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"]),
+    output:
+        "data/pathways/processed/intersection_{genelist_name}.csv",
+    script:
+        "find_signature_intersection.R"
+
+rule all_comparisons_intersection:
+    input:
+        expand("plots/compare_datasets_{normalisation}-intersection_{genelist_name}.png",
+               normalisation=["", "_vsn", "_vsn_mad", "_mad"],
+               genelist_name=["ifn", "nk_dipp", "exhaustion_down_wherry",
+                   "cd4_activation_green_30", "cd4_activation_yellow_30",
+                   "cd4_activation_black_30"]),
