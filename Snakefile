@@ -176,13 +176,15 @@ rule calc_mean_ranks:
         sample_info="data/datasets/{dataset}/sample_info.tsv",
         ranks="data/datasets/{dataset}/ranked_expression{normalisation}.tsv",
     output:
-        ranks="data/datasets/{dataset}/mean_ranks{normalisation}-{genelist_name}.tsv",
+        ranks="data/datasets/{dataset}/ranks{normalisation}-{genelist_name}.tsv",
+        mean_ranks="data/datasets/{dataset}/mean_ranks{normalisation}-{genelist_name}.tsv",
     script:
         "scripts/calc_mean_ranks.R"
 
 rule all_signatures:
     input:
-        expand("data/datasets/{dataset}/average_logfc{normalisation}-{genelist_name}.tsv",
+        expand("data/datasets/{dataset}/{summary}{normalisation}-{genelist_name}.tsv",
+               summary=["average_logfc", "mean_ranks"],
                dataset=["smith", "chaussabelA", "chaussabelB", "coulson"],
                normalisation=["", "_vsn", "_vsn_mad", "_mad"],
                genelist_name=["ifn", "nk_dipp", "exhaustion_down_wherry",
@@ -191,17 +193,20 @@ rule all_signatures:
 
 rule compare_datasets:
     input:
-        expand("data/datasets/{dataset}/average_logfc{{normalisation}}-{{genelist_name}}.tsv",
+        expand("data/datasets/{dataset}/{{summary}}{{normalisation}}-{{genelist_name}}.tsv",
                dataset=["smith", "chaussabelA", "chaussabelB", "coulson"]),
+    wildcard_constraints:
+        summary="average_logfc|mean_ranks"
     output:
-        "plots/compare_datasets_{normalisation}-{genelist_name}.png",
-        "plots/compare_datasets_se_{normalisation}-{genelist_name}.png",
+        "plots/compare_datasets_{summary}--{normalisation}-{genelist_name}.png",
+        "plots/compare_datasets_{summary}--se_{normalisation}-{genelist_name}.png",
     script:
         "compare_datasets.R"
 
 rule all_comparisons:
     input:
-        expand("plots/compare_datasets_{normalisation}-{genelist_name}.png",
+        expand("plots/compare_datasets_{summary}--{normalisation}-{genelist_name}.png",
+               summary=["average_logfc", "mean_ranks"],
                normalisation=["", "_vsn", "_vsn_mad", "_mad"],
                genelist_name=["ifn", "nk_dipp", "exhaustion_down_wherry",
                    "cd4_activation_green_30", "cd4_activation_yellow_30",
