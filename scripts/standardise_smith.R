@@ -4,7 +4,7 @@ library(stringr)
 library(tibble)
 library(tidyr)
 
-source("utils.R")
+source("scripts/utils.R")
 
 build_sample_info <- function() {
     sample_info = read.csv("data/datasets/smith/sample_info.txt", sep='\t', check.names=FALSE)

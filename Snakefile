@@ -31,7 +31,7 @@ rule download_biomart:
     output:
         "data/datasets/biomart.Rdata",
     script:
-        "get_biomart.R"
+        "scripts/get_biomart.R"
 
 rule standardise_smith:
     input:
@@ -43,7 +43,7 @@ rule standardise_smith:
         "data/datasets/smith/probe_to_gene.tsv",
         "data/datasets/smith/expression.tsv",
     script:
-        "standardise_smith.R"
+        "scripts/standardise_smith.R"
 
 ###############################################################################
 # Chaussabel data                                                             #
@@ -84,7 +84,7 @@ rule standardise_chaussabel:
         "data/datasets/chaussabelB/probe_to_gene.tsv",
         "data/datasets/chaussabelB/expression.tsv",
     script:
-        "standardise_chaussabel.R"
+        "scripts/standardise_chaussabel.R"
 
 ###############################################################################
 # Coulson data                                                                #
@@ -124,7 +124,7 @@ rule standardise_coulson:
         "data/datasets/coulson/probe_to_gene.tsv",
         "data/datasets/coulson/expression.tsv",
     script:
-        "standardise_coulson.R"
+        "scripts/standardise_coulson.R"
 
 ###############################################################################
 # Normalisation                                                               #
@@ -136,7 +136,7 @@ rule apply_vsn:
     output:
         "data/datasets/{dataset}/expression_vsn.tsv",
     script:
-        "apply_vsn.R"
+        "scripts/apply_vsn.R"
 
 rule apply_mad:
     input:
@@ -144,7 +144,7 @@ rule apply_mad:
     output:
         "data/datasets/{dataset}/expression{normalisation}_mad.tsv",
     script:
-        "apply_mad_normalisation.R"
+        "scripts/apply_mad_normalisation.R"
 
 rule calc_logfc:
     input:
@@ -158,7 +158,7 @@ rule calc_logfc:
         average_logfc="data/datasets/{dataset}/average_logfc{normalisation}-{genelist_name}.tsv",
         median_logfc="data/datasets/{dataset}/median_logfc{normalisation}-{genelist_name}.tsv",
     script:
-        "calculate_logfc_signature.R"
+        "scripts/calculate_logfc_signature.R"
 
 rule rank_all_genes:
     input:
@@ -201,7 +201,7 @@ rule compare_datasets:
         "plots/compare_datasets_{summary}--{normalisation}-{genelist_name}.png",
         "plots/compare_datasets_{summary}--se_{normalisation}-{genelist_name}.png",
     script:
-        "compare_datasets.R"
+        "scripts/compare_datasets.R"
 
 rule all_comparisons:
     input:
@@ -219,11 +219,12 @@ rule find_signature_intersection:
     output:
         "data/pathways/processed/intersection_{genelist_name}.csv",
     script:
-        "find_signature_intersection.R"
+        "scripts/find_signature_intersection.R"
 
 rule all_comparisons_intersection:
     input:
-        expand("plots/compare_datasets_{normalisation}-intersection_{genelist_name}.png",
+        expand("plots/compare_datasets_{summary}--{normalisation}-intersection_{genelist_name}.png",
+               summary=["average_logfc", "mean_ranks"],
                normalisation=["", "_vsn", "_vsn_mad", "_mad"],
                genelist_name=["ifn", "nk_dipp", "exhaustion_down_wherry",
                    "cd4_activation_green_30", "cd4_activation_yellow_30",
@@ -239,6 +240,6 @@ rule combine_datasets:
     output:
         "data/datasets/combined/average_logfc{normalisation}.tsv",
     script:
-        "combine_datasets.R"
+        "scripts/combine_datasets.R"
 
 
