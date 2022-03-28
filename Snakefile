@@ -156,6 +156,7 @@ rule calc_logfc:
         gene_means="data/datasets/{dataset}/gene_means{normalisation}-{genelist_name}.tsv",
         logfc="data/datasets/{dataset}/logfc{normalisation}-{genelist_name}.tsv",
         average_logfc="data/datasets/{dataset}/average_logfc{normalisation}-{genelist_name}.tsv",
+        median_logfc="data/datasets/{dataset}/median_logfc{normalisation}-{genelist_name}.tsv",
     script:
         "calculate_logfc_signature.R"
 
@@ -202,3 +203,17 @@ rule all_comparisons_intersection:
                genelist_name=["ifn", "nk_dipp", "exhaustion_down_wherry",
                    "cd4_activation_green_30", "cd4_activation_yellow_30",
                    "cd4_activation_black_30"]),
+
+rule combine_datasets:
+    input:
+        expand("data/datasets/{dataset}/average_logfc{{normalisation}}-{genelist_name}.tsv",
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"],
+               genelist_name=["ifn", "nk_dipp", "exhaustion_down_wherry",
+                   "cd4_activation_green_30", "cd4_activation_yellow_30",
+                   "cd4_activation_black_30"]),
+    output:
+        "data/datasets/combined/average_logfc{normalisation}.tsv",
+    script:
+        "combine_datasets.R"
+
+
