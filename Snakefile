@@ -160,6 +160,26 @@ rule calc_logfc:
     script:
         "calculate_logfc_signature.R"
 
+rule rank_all_genes:
+    input:
+        expression="data/datasets/{dataset}/expression{normalisation}.tsv",
+        probe_to_gene="data/datasets/{dataset}/probe_to_gene.tsv",
+    output:
+        ranks="data/datasets/{dataset}/ranked_expression{normalisation}.tsv",
+        gene_means="data/datasets/{dataset}/gene_means{normalisation}.tsv",
+    script:
+        "scripts/rank_genes.R"
+
+rule calc_mean_ranks:
+    input:
+        genelist="data/pathways/processed/{genelist_name}.csv",
+        sample_info="data/datasets/{dataset}/sample_info.tsv",
+        ranks="data/datasets/{dataset}/ranked_expression{normalisation}.tsv",
+    output:
+        ranks="data/datasets/{dataset}/mean_ranks{normalisation}-{genelist_name}.tsv",
+    script:
+        "scripts/calc_mean_ranks.R"
+
 rule all_signatures:
     input:
         expand("data/datasets/{dataset}/average_logfc{normalisation}-{genelist_name}.tsv",
