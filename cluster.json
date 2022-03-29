@@ -1,0 +1,16 @@
+{
+    "__default__" :
+    {
+        "account" : "CWALLACE-SL2-CPU",
+        "time" : "01:00:00",
+        "cpus-per-task" : 1,
+        "partition" : "icelake",
+        "job" : "{rule}",
+        "error" : "logs/{rule}.{wildcards}.out"
+    },
+    "run_DPMUnc" :
+    {
+        "time" : "04:00:00",
+        "cpus-per-task" : 1
+    },
+}

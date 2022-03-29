@@ -1,0 +1,87 @@
+localrules: trim_results, compute_k, traceplots
+
+SEEDS=list(range(1001,1011))
+ITERATIONS=50000000
+THINFREQ=1000
+BURN_IN=int((ITERATIONS/THINFREQ)/2)
+
+rule all:
+    input:
+        expand("plots/{dataset}{processing}/{signature}/trace_quantiles.png",
+               processing = ["_vsn_mad_logfc", "_vsn_mad_logfc_novar"],
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"],
+               signature=["signatures_v2", "signatures_v3", "ifn",
+                        "nk_dipp", "exhaustion_down_wherry", "cd4_activation_green_30",
+                        "cd4_activation_black_30", "cd4_activation_yellow_30"]),
+        expand("plots/all_calls_heatmap_{dataset}{processing}.png",
+               processing = ["_vsn_mad_logfc", "_vsn_mad_logfc_novar"],
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"]),
+
+rule run_DPMUnc:
+    input:
+        obs="data/processed/{dataset}/obsData.tsv",
+        var="data/processed/{dataset}/obsVars.tsv",
+    params:
+        iterations=ITERATIONS,
+        thinningFreq=THINFREQ,
+    output:
+        "results/{dataset}/seed{seed}/alpha.csv",
+        "results/{dataset}/seed{seed}/K.csv",
+        "results/{dataset}/seed{seed}/clusterAllocations.csv",
+        "results/{dataset}/seed{seed}/pLatentsGivenClusters.csv",
+    script:
+        "scripts/running_dpMix.R"
+
+rule trim_results:
+    input:
+        "results/{dataset}/seed{seed}/{resfile}"
+    params:
+        burn_in=BURN_IN
+    output:
+        "trimmed_results/{dataset}/seed{seed}/{resfile}"
+    shell:
+        """
+        awk "NR > {params.burn_in}" {input} > {output}
+        """
+
+rule traceplots:
+    input:
+        expand("results/{{dataset}}/seed{seed}/{resfile}",
+               seed=SEEDS,
+               resfile=["alpha.csv", "pLatentsGivenClusters.csv", "K.csv"])
+    params:
+        dataset_folders=expand("results/{{dataset}}/seed{seed}/", seed=SEEDS)
+    output:
+        "plots/{dataset}/trace_medians.png",
+        "plots/{dataset}/trace_quantiles.png",
+    script:
+        "scripts/traceplots.R"
+
+rule psm_plots:
+    input:
+        expand("trimmed_results/{{dataset}}/seed{seed}/clusterAllocations.csv",
+               seed=SEEDS),
+        obs="data/processed/{dataset}/obsData.tsv",
+        var="data/processed/{dataset}/obsVars.tsv",
+    params:
+        dataset_folders=expand("trimmed_results/{{dataset}}/seed{seed}/", seed=SEEDS)
+    output:
+        "plots/{dataset}/psm_heatmap.png",
+        "plots/{dataset}/obs_heatmap.png",
+        "plots/{dataset}/obs_vars_heatmap.png",
+        result="plots/{dataset}/psm_data.rds",
+    script:
+        "scripts/psm_plots.R"
+
+rule compare_calls:
+    input:
+        expand("plots/{{subset}}/{signature}/psm_data.rds",
+               signature=["signatures_v2", "signatures_v3", "ifn",
+                        "nk_dipp", "exhaustion_down_wherry", "cd4_activation_green_30",
+                        "cd4_activation_black_30", "cd4_activation_yellow_30"]),
+    output:
+        "plots/all_calls_heatmap_{subset}.png",
+    script:
+        "scripts/compare_calls.R"
+
+# snakemake --snakefile DPMUnc.rules -k -j 1000 --cluster-config cluster.json --cluster "sbatch -A {cluster.account} -p {cluster.partition}  -c {cluster.cpus-per-task}   -t {cluster.time} --output {cluster.error} -J {cluster.job} "
