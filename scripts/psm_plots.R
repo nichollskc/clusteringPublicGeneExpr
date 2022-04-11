@@ -27,8 +27,9 @@ psm_plots <- function(dataset, datasets, name, focus_dataset=NULL) {
     calls=maxpear(bigpsm, method="comp") ## calls
 
     # MClust solution
-    BIC <- mclustBIC(obsData)
-    mclust_solution <- Mclust(obsData, x=BIC)
+    print("Calculating mclust solution")
+    mclust_solution <- calc_mclust(obsData)
+    print(mclust_solution)
 
     annotations = get_ann_colors(calls$cl, mclust_solution$classification, obsData)
 
@@ -74,22 +75,26 @@ psm_plots <- function(dataset, datasets, name, focus_dataset=NULL) {
                            breaks = customColours$breaks,
                            filename=paste0("plots/", name, "/obs_heatmap.png"))
 
-    if (!grepl("novar", name)) {
+    if(grepl("novar", name)) {
+        min_val = min(obsVars)
+        max_val = max(obsVars)
+        customColours = generate_balanced_colours(c(min_val / 10, max_val * 10))
+    } else {
         customColours = generate_balanced_colours(obsVars)
-        obs_vars_heatmap = pheatmap(obsVars,
-                                    clustering_method="complete",
-                                    cluster_rows = hclust.comp,
-                                    cluster_col = FALSE,
-                                    annotation_colors = annotations$colors,
-                                    annotation_row = annotations$ann,
-                                    color = customColours$colours,
-                                    fontsize_col = 8,
-                                    fontsize_row = 6,
-                                    width=9,
-                                    height = 14,
-                                    breaks = customColours$breaks,
-                                    filename=paste0("plots/", name, "/obs_vars_heatmap.png"))
     }
+    obs_vars_heatmap = pheatmap(obsVars,
+                                clustering_method="complete",
+                                cluster_rows = hclust.comp,
+                                cluster_cols = FALSE,
+                                annotation_colors = annotations$colors,
+                                annotation_row = annotations$ann,
+                                color = customColours$colours,
+                                fontsize_col = 8,
+                                fontsize_row = 6,
+                                width=9,
+                                height = 14,
+                                breaks = customColours$breaks,
+                                filename=paste0("plots/", name, "/obs_vars_heatmap.png"))
 
     print("Entries from different PSMs")
     print(sapply(psms, function(x) x[4, 5]))

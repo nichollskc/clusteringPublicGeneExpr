@@ -245,7 +245,8 @@ rule combine_datasets:
 rule make_individual_dataset:
     input:
         expand("data/datasets/{{dataset}}/average_logfc{{normalisation}}-{genelist_name}.tsv",
-               genelist_name=["ifn", "nk_dipp", "exhaustion_down_wherry",
+               genelist_name=["exhaustion_down_wherry",
+                   "ifn", "nk_dipp",
                    "cd4_activation_green_30", "cd4_activation_yellow_30",
                    "cd4_activation_black_30"]),
     output:
@@ -259,8 +260,23 @@ rule make_individual_dataset:
     script:
         "scripts/make_individual_dataset.R"
 
+rule make_individual_dataset_fix:
+    input:
+        expand("data/datasets/{{dataset}}/average_logfc{{normalisation}}-{genelist_name}.tsv",
+               genelist_name=["exhaustion_down_wherry",
+                   "ifn", "nk_dipp",
+                   "cd4_activation_green_30", "cd4_activation_yellow_30",
+                   "cd4_activation_black_30"]),
+    output:
+        expand("data/processed/{{dataset}}{{normalisation}}_logfc{var}/{signature}/{outputfile}",
+               var = ["", "_novar"],
+               outputfile = ["obsVars.tsv", "obsData.tsv"],
+               signature = ["signatures_v4"]),
+    script:
+        "scripts/make_individual_dataset.R"
+
 rule all_datasets:
     input:
-        expand("data/processed/{dataset}{processing}/signatures_v3/obsData.tsv",
+        expand("data/processed/{dataset}{processing}/signatures_v4/obsData.tsv",
                processing = ["_vsn_mad_logfc", "_vsn_mad_logfc_novar"],
                dataset=["smith", "chaussabelA", "chaussabelB", "coulson"]),

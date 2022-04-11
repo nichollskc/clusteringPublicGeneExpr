@@ -10,7 +10,13 @@
     },
     "run_DPMUnc" :
     {
-        "time" : "04:00:00",
+        "time" : "1-12:00:00",
+        "cpus-per-task" : 1
+    },
+    "psm_plots" :
+    {
+        "partition": "skylake",
+        "time" : "8:00:00",
         "cpus-per-task" : 1
     },
 }

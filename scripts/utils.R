@@ -4,6 +4,8 @@ library(dplyr)
 library(grid)
 library(gridExtra)
 library(magrittr)
+library(mcclust)
+library(mclust)
 library(R.cache)
 
 save_pheatmap_png <- function(x, filename, width=1200, height=1000, res = 150) {
@@ -14,7 +16,7 @@ save_pheatmap_png <- function(x, filename, width=1200, height=1000, res = 150) {
 }
 
 # From process_v2_functions.R
-calc_psm=function(x,burn=0.5) {
+raw_calc_psm=function(x,burn=0.5) {
   n=nrow(x)
   if(burn>0)
     x=x[ (burn*n) : n, , drop=FALSE]
@@ -31,6 +33,8 @@ calc_psm=function(x,burn=0.5) {
   psm=m/nrow(x)
   psm
 }
+
+calc_psm <- addMemoization(raw_calc_psm)
 
 adjust_labels_B_to_match_A <- function(calls_A, calls_B) {
     K_A = length(unique(calls_A))
@@ -84,20 +88,27 @@ get_ann_colors=function(calls, mclust_calls, obsData, verbose=TRUE) {
   list(ann=ann,colors=ann_colors)
 }
 
-raw_calc_psms <- function(dataset, datasets) {
-    allocs=lapply(paste0(datasets, "/clusterAllocations.tsv"), fread)## read the allocations
+calc_psms <- function(datasets) {
+    allocs=lapply(paste0(datasets, "/clusterAllocations.csv"), fread)## read the allocations
     # This line is essential for some reason
     allocs %<>% lapply(., function(x) as.matrix(x[1:nrow(x),]))
-    trimmed_allocs = lapply(allocs, function(x) x[-c(1:(nrow(x)/2)),])
-    #bigalloc = do.call(rbind, allocs)
-    bigalloc = trimmed_allocs %>% do.call("rbind",.) ## combine, discarding first 50%
+#    trimmed_allocs = lapply(allocs, function(x) x[-c(1:(nrow(x)/2)),])
+    bigalloc = do.call(rbind, allocs)
+    #bigalloc = trimmed_allocs %>% do.call("rbind",.) ## combine, discarding first 50%
     bigpsm=calc_psm(bigalloc,burn=0) ## make a psm, don't discard any burn in because already discarded
 
-    psms = lapply(trimmed_allocs, function(x) calc_psm(x, burn=0))
+#    psms = lapply(trimmed_allocs, function(x) calc_psm(x, burn=0))
+    psms = lapply(allocs, function(x) calc_psm(x, burn=0))
     return(list(bigpsm=bigpsm, psms=psms))
 }
 
-calc_psms <- addMemoization(raw_calc_psms)
+
+raw_calc_mclust <- function(obsData) {
+    BIC <- mclustBIC(obsData)
+    Mclust(obsData, x=BIC)
+}
+
+calc_mclust <- addMemoization(raw_calc_mclust)
 
 plot_ari_for_datasets <- function(combined_calls, name, width=1400, height=1500) {
     all_ari = matrix(0, nrow=ncol(combined_calls), ncol=ncol(combined_calls))
