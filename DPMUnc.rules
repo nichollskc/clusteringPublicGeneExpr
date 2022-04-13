@@ -112,4 +112,16 @@ rule compare_calls:
     script:
         "scripts/compare_calls.R"
 
+rule chisq:
+    input:
+        sample="data/datasets/{dataset}/sample_info.tsv",
+        obs="data/processed/{dataset}_vsn_mad_logfc/signatures_v2/obsData.tsv",
+        var="data/processed/{dataset}_vsn_mad_logfc/signatures_v2/obsVars.tsv",
+        calls="plots/{dataset}/all_calls.rds",
+    output:
+        pvals="plots/{dataset}/pvals.csv",
+        plot="plots/{dataset}/chisq_disease_DPMUnc__{dataset}_vsn_mad_logfc_novar.ifn.png",
+    script:
+        "scripts/chisq.R"
+
 # snakemake --snakefile DPMUnc.rules -k -j 1000 --cluster-config cluster.json --cluster "sbatch -A {cluster.account} -p {cluster.partition}  -c {cluster.cpus-per-task}   -t {cluster.time} --output {cluster.error} -J {cluster.job} "
