@@ -110,7 +110,8 @@ raw_calc_mclust <- function(obsData) {
 
 calc_mclust <- addMemoization(raw_calc_mclust)
 
-plot_ari_for_datasets <- function(combined_calls, name, width=1400, height=1500) {
+plot_ari_for_datasets <- function(combined_calls, plots_dir, width=1400, height=1500) {
+    print(colnames(combined_calls))
     all_ari = matrix(0, nrow=ncol(combined_calls), ncol=ncol(combined_calls))
     all_ari = data.frame(all_ari)
     rownames(all_ari) = colnames(combined_calls)
@@ -118,12 +119,13 @@ plot_ari_for_datasets <- function(combined_calls, name, width=1400, height=1500)
     for (var1 in colnames(all_ari)) {
         for (var2 in rownames(all_ari)) {
             print(paste(var1, var2))
-            all_ari[var2, var1] = adjustedRandIndex(combined_calls[[var1]], combined_calls[[var2]])
+            all_ari[var2, var1] = adjustedRandIndex(combined_calls[, var1], combined_calls[, var2])
         }
     }
+    write.csv(all_ari, paste0(plots_dir, "/ari_all_calls.csv"))
 
-    K = sapply(combined_calls, function(x) length(unique(x)))
-    pheatmap(combined_calls, file=paste0("plots/all_calls_with_mclust_", name, ".png"))
+    K = apply(combined_calls, MARGIN=2, FUN=function(x) length(unique(x)))
+    pheatmap(combined_calls, file=paste0(plots_dir, "/all_calls_with_mclust.png"))
     K_df = data.frame(K)
     K_df$K = as.character(K)
 
@@ -137,7 +139,7 @@ plot_ari_for_datasets <- function(combined_calls, name, width=1400, height=1500)
     hclust.comp <- hclust(dist_from_ari(all_ari), method="complete")
     ari_hmp = pheatmap(all_ari,
                        annotation_row=K_df,
-                       annotation_colors=list("K"=structure(c("#000000", "#56B4E9", "#009E73", "#E69F00", "#D55E00")[1:length(unique(K_df$K))],
+                       annotation_colors=list("K"=structure(palette[1:length(unique(K_df$K))],
                                                             names=sort(as.numeric(unique(K_df$K))))),
                        display_numbers=TRUE,
                        color=colorRampPalette((RColorBrewer::brewer.pal(n = 7,
@@ -149,7 +151,7 @@ plot_ari_for_datasets <- function(combined_calls, name, width=1400, height=1500)
                        cellwidth=22,
                        cellheight=20,
                        legend=FALSE)
-    save_pheatmap_png(ari_hmp, paste0("plots/ari_all_calls_", name, ".png"), width=width, height=height)
+    save_pheatmap_png(ari_hmp, paste0(plots_dir, "/ari_all_calls.png"), width=width, height=height)
 }
 
 restrict_to_present_samples <- function(sample_info, expression) {

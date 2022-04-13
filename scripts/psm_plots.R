@@ -1,4 +1,5 @@
 source("scripts/utils.R")
+library(cluster)
 library(dplyr)
 library(ggplot2)
 library(grid)
@@ -30,6 +31,29 @@ psm_plots <- function(dataset, datasets, name, focus_dataset=NULL) {
     print("Calculating mclust solution")
     mclust_solution <- calc_mclust(obsData)
     print(mclust_solution)
+
+    scaled_obsData = DPMUnc::scale_data(obsData, obsVars)$data
+    print("Calculating mclust solution")
+    mclust_solution_scaled <- calc_mclust(scaled_obsData)
+    print(mclust_solution_scaled)
+
+    gap_stat <- clusGap(obsData,
+                        FUN = kmeans,
+                        nstart = 25,
+                        K.max = 20,
+                        B = 50)
+    print(gap_stat)
+    best_K = which.max(gap_stat$Tab[, 3])
+    kmeans_solution = kmeans(obsData, centers=best_K, nstart=25)
+
+    gap_stat <- clusGap(scaled_obsData,
+                        FUN = kmeans,
+                        nstart = 25,
+                        K.max = 20,
+                        B = 50)
+    print(gap_stat)
+    best_K = which.max(gap_stat$Tab[, 3])
+    kmeans_solution_scaled = kmeans(scaled_obsData, centers=best_K, nstart=25)
 
     annotations = get_ann_colors(calls$cl, mclust_solution$classification, obsData)
 
@@ -174,7 +198,8 @@ psm_plots <- function(dataset, datasets, name, focus_dataset=NULL) {
         return(list("colours"=customColours, "breaks"=customBreaks))
     }
 
-    return(list(name=name, bigpsm=bigpsm, calls=calls, hclust.comp=hclust.comp, mclust_calls=mclust_solution$classification))
+    return(list(name=name, bigpsm=bigpsm, calls=calls, hclust.comp=hclust.comp, mclust_calls=mclust_solution$classification,
+                mclust_scaled_calls=mclust_solution_scaled$classification, kmeans_calls=kmeans_solution, kmeans_scaled_calls=kmeans_solution_scaled))
 }
 
 dataset_name = snakemake@wildcards[["dataset"]]

@@ -6,7 +6,6 @@
         "cpus-per-task" : 1,
         "partition" : "icelake",
         "job" : "{rule}",
-        "error" : "logs/{rule}.{wildcards}.out"
     },
     "run_DPMUnc" :
     {
