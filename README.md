@@ -4,3 +4,5 @@ Saved this from affymetrix https://www.affymetrix.com/products_services/arrays/s
 HuGene-1_1-st-v1.na36.hg19.probeset.csv.zip
 
 snakemake  -k -j 1000 --cluster-config slurm_config.json --cluster "sbatch -A {cluster.account} -p {cluster.partition}  -c {cluster.cpus-per-task}   -t {cluster.time} --output {cluster.error} -J {cluster.job}" all_signatures
+
+snakemake all_datasets -k -j 1000 --cluster-config cluster.json --cluster "sbatch -A {cluster.account} -p {cluster.partition}  -c {cluster.cpus-per-task}   -t {cluster.time} -J {cluster.job} "  --dryrun

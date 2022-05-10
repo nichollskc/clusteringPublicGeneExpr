@@ -1,4 +1,4 @@
-localrules: find_signature_intersection
+localrules: find_signature_intersection, fetch_chaussabel, fetch_chaussabel_sample_info, fetch_coulson, fetch_coulson_sample_info, fetch_smith, fetch_smith_array, fetch_smith_sample_info
 
 wildcard_constraints:
     dataset = "smith|chaussabelA|chaussabelB|coulson",
@@ -156,7 +156,6 @@ rule calc_logfc:
         gene_means="data/datasets/{dataset}/gene_means{normalisation}-{genelist_name}.tsv",
         logfc="data/datasets/{dataset}/logfc{normalisation}-{genelist_name}.tsv",
         average_logfc="data/datasets/{dataset}/average_logfc{normalisation}-{genelist_name}.tsv",
-        median_logfc="data/datasets/{dataset}/median_logfc{normalisation}-{genelist_name}.tsv",
     script:
         "scripts/calculate_logfc_signature.R"
 
@@ -245,6 +244,7 @@ rule combine_datasets:
 rule make_individual_dataset:
     input:
         expand("data/datasets/{{dataset}}/average_logfc{{normalisation}}-{genelist_name}.tsv",
+               # Important that exhaustion is first signature in input, so that it is excluded for sig_v3
                genelist_name=["exhaustion_down_wherry",
                    "ifn", "nk_dipp",
                    "cd4_activation_green_30", "cd4_activation_yellow_30",
@@ -254,29 +254,18 @@ rule make_individual_dataset:
                var = ["", "_novar"],
                outputfile = ["obsVars.tsv", "obsData.tsv"],
                signature = ["signatures_v2", "signatures_v3",
-                   "ifn", "nk_dipp", "exhaustion_down_wherry",
-                   "cd4_activation_green_30", "cd4_activation_yellow_30",
-                   "cd4_activation_black_30"]),
-    script:
-        "scripts/make_individual_dataset.R"
-
-rule make_individual_dataset_fix:
-    input:
-        expand("data/datasets/{{dataset}}/average_logfc{{normalisation}}-{genelist_name}.tsv",
-               genelist_name=["exhaustion_down_wherry",
-                   "ifn", "nk_dipp",
-                   "cd4_activation_green_30", "cd4_activation_yellow_30",
-                   "cd4_activation_black_30"]),
-    output:
-        expand("data/processed/{{dataset}}{{normalisation}}_logfc{var}/{signature}/{outputfile}",
-               var = ["", "_novar"],
-               outputfile = ["obsVars.tsv", "obsData.tsv"],
-               signature = ["signatures_v4"]),
+                            "ifn", "nk_dipp", "exhaustion_down_wherry",
+                            "cd4_activation_green_30", "cd4_activation_yellow_30",
+                            "cd4_activation_black_30"]),
     script:
         "scripts/make_individual_dataset.R"
 
 rule all_datasets:
     input:
-        expand("data/processed/{dataset}{processing}/signatures_v4/obsData.tsv",
+        expand("data/processed/{dataset}{processing}/{signature}/obsData.tsv",
+               signature = ["signatures_v2", "signatures_v3",
+                            "ifn", "nk_dipp", "exhaustion_down_wherry",
+                            "cd4_activation_green_30", "cd4_activation_yellow_30",
+                            "cd4_activation_black_30"],
                processing = ["_vsn_mad_logfc", "_vsn_mad_logfc_novar"],
                dataset=["smith", "chaussabelA", "chaussabelB", "coulson"]),

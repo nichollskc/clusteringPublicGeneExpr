@@ -41,7 +41,7 @@ calculate_average_logfc <- function(gene_means, full_dataset, sample_info, genel
 }
 
 calculate_logfc_signature <- function(genelist_name, expression, full_dataset, sample_info) {
-    dir_genelists = "~/rds/rds-cew54-basis/People/KATH/publicGeneExpr/"
+    dir_genelists = "./"
     genelist_file = paste0(dir_genelists, "data/pathways/processed/", genelist_name, ".csv")
     genelist <- read_gene_list(genelist_file)
 
