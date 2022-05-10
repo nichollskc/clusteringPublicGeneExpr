@@ -1,6 +1,6 @@
 localrules: trim_results, compute_k, traceplots
 
-SEEDS=list(range(1001,1021))
+SEEDS=list(range(1001,1011))
 ITERATIONS=20000000
 THINFREQ=500
 BURN_IN=int((ITERATIONS/THINFREQ)/2)

@@ -20,16 +20,12 @@ compare_versions <- function(psm_results, base_run, plots_dir) {
 
     all_calls_mclust = do.call(cbind, lapply(psm_results, function(x) adjust_labels_B_to_match_A(base_calls, x$mclust_calls)))
     colnames(all_calls_mclust) = paste0("mclust__", colnames(all_calls))
-    all_calls_mclust_scaled = do.call(cbind, lapply(psm_results, function(x) adjust_labels_B_to_match_A(base_calls, x$mclust_scaled_calls)))
-    colnames(all_calls_mclust_scaled) = paste0("mclust_scaled__", colnames(all_calls))
 
     all_calls_kmeans = do.call(cbind, lapply(psm_results, function(x) adjust_labels_B_to_match_A(base_calls, x$kmeans_calls$cluster)))
     colnames(all_calls_kmeans) = paste0("kmeans__", colnames(all_calls))
-    all_calls_kmeans_scaled = do.call(cbind, lapply(psm_results, function(x) adjust_labels_B_to_match_A(base_calls, x$kmeans_scaled_calls$cluster)))
-    colnames(all_calls_kmeans_scaled) = paste0("kmeans_scaled__", colnames(all_calls))
 
     colnames(all_calls) = paste0("DPMUnc__", colnames(all_calls))
-    all_calls = cbind(all_calls, all_calls_mclust, all_calls_mclust_scaled, all_calls_kmeans, all_calls_kmeans_scaled)
+    all_calls = cbind(all_calls, all_calls_mclust, all_calls_kmeans)
     print(apply(all_calls, MARGIN=1, unique))
 
     print(all_calls)
