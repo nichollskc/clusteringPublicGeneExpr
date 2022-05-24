@@ -20,9 +20,11 @@ compare_versions <- function(psm_results, base_run, plots_dir) {
 
     all_calls_mclust = do.call(cbind, lapply(psm_results, function(x) adjust_labels_B_to_match_A(base_calls, x$mclust_calls)))
     colnames(all_calls_mclust) = paste0("mclust__", colnames(all_calls))
+    all_calls_mclust = all_calls_mclust %>% data.frame() %>% select(-contains("novar"))
 
     all_calls_kmeans = do.call(cbind, lapply(psm_results, function(x) adjust_labels_B_to_match_A(base_calls, x$kmeans_calls$cluster)))
     colnames(all_calls_kmeans) = paste0("kmeans__", colnames(all_calls))
+    all_calls_kmeans = all_calls_kmeans %>% data.frame() %>% select(-contains("novar"))
 
     colnames(all_calls) = paste0("DPMUnc__", colnames(all_calls))
     all_calls = cbind(all_calls, all_calls_mclust, all_calls_kmeans)

@@ -13,6 +13,8 @@ rule all:
                signature=["signatures_v2", "signatures_v3", "ifn",
                         "nk_dipp", "exhaustion_down_wherry", "cd4_activation_green_30",
                         "cd4_activation_black_30", "cd4_activation_yellow_30"]),
+        expand("plots/{dataset}/pvals.csv",
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"]),
         expand("plots/{dataset}/all_calls.rds",
                dataset=["smith", "chaussabelA", "chaussabelB", "coulson"]),
         expand("results/{dataset}{processing}/{signature}/meanLatents.csv",
@@ -121,6 +123,7 @@ rule chisq:
         calls="plots/{dataset}/all_calls.rds",
     output:
         pvals="plots/{dataset}/pvals.csv",
+        combined="plots/{dataset}/calls_and_sample_info.csv",
         plot="plots/{dataset}/chisq_disease_DPMUnc__{dataset}_vsn_mad_logfc_novar.ifn.png",
     script:
         "scripts/chisq.R"

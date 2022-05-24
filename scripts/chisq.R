@@ -14,15 +14,15 @@ generate_balanced_colours <- function(obj) {
 }
 
 get_chisq_pvalue <- function(df, var1, var2) {
-    tab = table(df[, c(var2, var1)])
+    tab = table(df[, c(var1, var2)])
     props = tab / rowSums(tab)
 
     print(tab)
-    if (length(unique(df[[var2]])) < 2) {
+    if (length(unique(df[[var1]])) < 2) {
         pval = 1
         print("Can't apply chisq.test since only one cluster")
     } else {
-        chi_res = chisq.test(df[[var1]], df[[var2]], simulate.p.value=TRUE)
+        chi_res = chisq.test(df[[var2]], df[[var1]], simulate.p.value=TRUE)
         print(chi_res)
         pval = chi_res$p.value
     }
@@ -64,7 +64,7 @@ heatmap_mean_by_cluster <- function(variable_name, combined_df, col_start="mean_
 }
 
 plot_props_obs <- function(signature, combined_df, disease_var="disease") {
-  chisq_res = get_chisq_pvalue(combined_df, disease_var, signature)
+  chisq_res = get_chisq_pvalue(combined_df, signature, disease_var)
   props_heatmap = heatmap_proportions(chisq_res)
   clustermeans_heatmap = heatmap_mean_by_cluster(signature, combined_df)
 
@@ -90,7 +90,6 @@ plot_props_obs_latents <- function(signature, combined_df, disease_var="disease"
                         gsub("\\.", "/", str_split(signatures[[1]], "__")[[1]][2]),
                         "/meanLatents.csv")
   latentMeans = read.csv(latents_file, row.names=1)
-  latentMeans = reverse_scaling(latentMeans)
   latentMeans = latentMeans %>%
     rownames_to_column("neat_sample_id") %>%
     rename_with(~ gsub("mean", "latent_mean", .x))
@@ -118,50 +117,32 @@ plot_props_obs_latents <- function(signature, combined_df, disease_var="disease"
   return(chisq_res$pval)
 }
 
+# Create HC variable
 sample_info = read.csv(snakemake@input[["sample"]], sep='\t') %>%
   mutate(HC = case_when(disease == "HC" ~ "HC",
-                        TRUE ~ "nonHC"),
-         disease = case_when(disease == 'VMP' ~ 'VASC',
-                             disease == 'VWG' ~ 'VASC',
-                             TRUE ~ disease))
+                        TRUE ~ "nonHC"))
 all_calls = readRDS(snakemake@input[["calls"]])
 
 obsData = read.csv(snakemake@input[["obs"]], sep='\t', row.names=1) %>%
   rownames_to_column("neat_sample_id")
 obsVars = read.csv(snakemake@input[["var"]], sep='\t', row.names=1)
-scaled = DPMUnc::scale_data(obsData[, 2:7], obsVars)
-
-reverse_scaling <- function(mat) {
-  center = attr(scaled$data, "scaled:center")
-  scaler = attr(scaled$data, "scaled:scale")
-
-  unscaled = apply(mat, 1, function(x) (x * scaler) + center) %>%
-    t() %>%
-    data.frame()
-  rownames(unscaled) = rownames(mat)
-  colnames(unscaled) = colnames(mat)
-  return(unscaled)
-}
 
 df = data.frame(name=colnames(all_calls),
                 signature = sapply(colnames(all_calls), function(x) strsplit(x, '\\.')[[1]][2]),
                 novar=ifelse(grepl("novar", colnames(all_calls)), "novar", ""),
                 method=sapply(colnames(all_calls), function(x) strsplit(x, '__')[[1]][1]),
                 K=apply(all_calls, 2, function(x) length(unique(x))))
-reduced_df = df %>%
-  filter(method %in% c("kmeans_scaled", "mclust_scaled", "DPMUnc"),
-         signature != "signatures_v3") %>%
-  filter(method == "DPMUnc" | novar == "") %>%
-  select(!name)
 
 combined = all_calls %>%
-  select(rownames(reduced_df)) %>%
+  select(rownames(df)) %>%
   rownames_to_column("neat_sample_id") %>%
   merge(sample_info[, c("neat_sample_id", "disease", "HC")], by="neat_sample_id") %>%
   merge(obsData, by="neat_sample_id") %>%
   column_to_rownames("neat_sample_id")
 
-signatures = rownames(reduced_df)
+write.csv(combined, snakemake@output[["combined"]])
+
+signatures = rownames(df)
 plots_dir = dirname(snakemake@output[["plot"]])
 
 pvals = data.frame("HC" = rep(1, length(signatures)),
