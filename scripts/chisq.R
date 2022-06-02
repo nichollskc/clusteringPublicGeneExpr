@@ -14,6 +14,13 @@ generate_balanced_colours <- function(obj) {
   return(list("colours"=customColours, "breaks"=customBreaks))
 }
 
+raw_fisher_pval <- function(tab, B) {
+    fisher = fisher.test(tab, simulate.p.value=TRUE, B=B)
+    return (fisher)
+}
+
+calc_fisher_pval <- addMemoization(raw_fisher_pval)
+
 get_chisq_pvalue <- function(df, var1, var2) {
     tab = table(df[, c(var1, var2)])
     props = tab / rowSums(tab)
@@ -23,7 +30,7 @@ get_chisq_pvalue <- function(df, var1, var2) {
         pval = 1
         print("Can't apply chisq.test since only one cluster")
     } else {
-        chi_res = chisq.test(df[[var2]], df[[var1]], simulate.p.value=TRUE)
+        chi_res = chisq.test(tab, simulate.p.value=TRUE, B=1000000)
         print(chi_res)
         pval = chi_res$p.value
     }
@@ -34,9 +41,31 @@ get_chisq_pvalue <- function(df, var1, var2) {
                  proportions=props))
 }
 
-heatmap_proportions <- function(chisq_res) {
-    pheatmap(chisq_res$proportions,
-             display_numbers=chisq_res$freq_counts,
+get_fisher_pvalue <- function(df, var1, var2) {
+    tab = table(df[, c(var1, var2)])
+    props = prop.table(tab, 2)
+    print("Proportions")
+    print(props)
+
+    print(tab)
+    if (length(unique(df[[var1]])) < 2) {
+        pval = 1
+        print("Can't apply fisher test since only one cluster")
+    } else {
+        fisher = calc_fisher_pval(tab, 1e8)
+        print(fisher)
+        pval = fisher$p.value
+    }
+
+    return (list(signature=var1,
+                 pval=pval,
+                 freq_counts=tab,
+                 proportions=props))
+}
+
+heatmap_proportions <- function(enrichment_res) {
+    pheatmap(enrichment_res$proportions,
+             display_numbers=enrichment_res$freq_counts,
              color=colorRampPalette((RColorBrewer::brewer.pal(n = 7,
                                                               name = "Blues")))(100),
              breaks=seq(0, 1, length.out=101),
@@ -44,7 +73,7 @@ heatmap_proportions <- function(chisq_res) {
              cluster_rows=FALSE,
              cluster_cols=FALSE,
              legend=FALSE,
-             main=paste0(chisq_res$signature, " (p:", signif(chisq_res$pval, digits=2), ")"))[[4]]
+             main=paste0(enrichment_res$signature, " (p:", signif(enrichment_res$pval, digits=2), ")"))[[4]]
 }
 
 heatmap_mean_by_cluster <- function(variable_name, combined_df, col_start="mean_logfc_") {
@@ -65,8 +94,9 @@ heatmap_mean_by_cluster <- function(variable_name, combined_df, col_start="mean_
 }
 
 plot_props_obs <- function(signature, combined_df, disease_var="disease") {
-  chisq_res = get_chisq_pvalue(combined_df, signature, disease_var)
-  props_heatmap = heatmap_proportions(chisq_res)
+#  chisq_res = get_chisq_pvalue(combined_df, signature, disease_var)
+  fisher_res = get_fisher_pvalue(combined_df, signature, disease_var)
+  props_heatmap = heatmap_proportions(fisher_res)
   clustermeans_heatmap = heatmap_mean_by_cluster(signature, combined_df)
 
   all_grobs = c(props_heatmap$grobs, list(textGrob("Counts/proportions by cluster")),
@@ -77,9 +107,9 @@ plot_props_obs <- function(signature, combined_df, disease_var="disease") {
                                    c(5,NA,11,NA,NA),
                                    c(2,4,6,8,9),
                                    c(3,NA,7,NA,NA)))
-  ggsave(paste0(plots_dir, "/chisq_", disease_var, "_", signature, ".png"), g)
+  ggsave(paste0(plots_dir, "/fisher_", disease_var, "_", signature, ".png"), g)
 
-  return(chisq_res$pval)
+  return(fisher_res$pval)
 }
 
 plot_props_obs_latents <- function(signature, combined_df, disease_var="disease") {
@@ -122,6 +152,9 @@ plot_props_obs_latents <- function(signature, combined_df, disease_var="disease"
 sample_info = read.csv(snakemake@input[["sample"]], sep='\t') %>%
   mutate(HC = case_when(disease == "HC" ~ "HC",
                         TRUE ~ "nonHC"))
+if (! "subtype" %in% colnames(sample_info)) {
+    sample_info["subtype"] = sample_info["disease"]
+}
 all_calls = readRDS(snakemake@input[["calls"]])
 
 obsData = read.csv(snakemake@input[["obs"]], sep='\t', row.names=1) %>%
@@ -137,7 +170,7 @@ df = data.frame(name=colnames(all_calls),
 combined = all_calls %>%
   select(rownames(df)) %>%
   rownames_to_column("neat_sample_id") %>%
-  merge(sample_info[, c("neat_sample_id", "disease", "HC")], by="neat_sample_id") %>%
+  merge(sample_info[, c("neat_sample_id", "disease", "HC", "subtype")], by="neat_sample_id") %>%
   merge(obsData, by="neat_sample_id") %>%
   column_to_rownames("neat_sample_id")
 
@@ -149,11 +182,17 @@ plots_dir = dirname(snakemake@output[["plot"]])
 pvals = data.frame("HC" = rep(1, length(signatures)),
                    "disease" = rep(1, length(signatures)),
                    row.names=signatures)
+if (! all(combined["subtype"] == combined["disease"])) {
+    pvals["subtype"] = 1
+}
+
+print(pvals)
 for (trait in colnames(pvals)) {
   for (signature in rownames(pvals)) {
     print(paste(trait, signature))
     pvals[signature, trait] = plot_props_obs(signature, combined, trait)
   }
+  print(pvals)
 }
 
 write.csv(pvals, snakemake@output[["pvals"]])

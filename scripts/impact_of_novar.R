@@ -59,6 +59,7 @@ g = ggplot(ari_vs_var_combined, aes(x=scaledvars_median, y=ari)) +
   stat_cor(label.x=0.5,
            aes(label = paste(..r.label.., ..p.label.., sep=', ')),
            method = "pearson",
+           alternative = "less",
            output.type = "text") +
   labs(title = "Uncertainty vs impact of ignoring uncertainty",
        x = "Median uncertainty (after scaling)",
