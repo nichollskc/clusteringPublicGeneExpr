@@ -30,7 +30,7 @@ get_var_info <- function(dataset) {
               runs_df=reduced_df, ari=reduced_ari))
 }
 
-datasets = lapply(c("smith", "chaussabelA", "chaussabelB", "coulson"),
+datasets = lapply(c("smith", "chaussabelA", "chaussabelB", "coulson1"),
                   get_var_info)
 
 ari_vs_vars = lapply(datasets, function(x) {

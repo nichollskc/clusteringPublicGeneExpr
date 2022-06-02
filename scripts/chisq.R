@@ -4,6 +4,7 @@ library(grid)
 library(gridExtra)
 library(dplyr)
 library(tibble)
+library(R.cache)
 
 generate_balanced_colours <- function(obj) {
   paletteLength = 100

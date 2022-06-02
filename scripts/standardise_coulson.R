@@ -53,10 +53,11 @@ build_sample_info <- function() {
     sample_info$neat_sample_id = paste0(sample_info$disease, "_", sample_info$dataset, "_", sample_info$patient_num)
     sample_info$patient_id = sample_info$neat_sample_id
     sample_info$column_name = sample_info[["Assay Name"]]
-    sample_info = sample_info[, c("neat_sample_id", "patient_id", "subtype", "dataset", "disease", "column_name")]
+    sample_info$batch = as.numeric(str_replace(sample_info[["Assay Name"]], "_.*", ""))
+    sample_info = sample_info[, c("neat_sample_id", "patient_id", "subtype", "dataset", "disease", "column_name", "batch")]
     sample_info = distinct(sample_info, column_name, .keep_all=TRUE)
 
-    sample_info = sample_info[sample_info$disease %in% c("SLE", "HC", "T1D"), ]
+    sample_info = filter(sample_info, disease %in% c("SLE", "HC", "T1D"), batch == 1)
 
     return (sample_info)
 }
@@ -102,6 +103,6 @@ print(all(length(sample_info$neat_sample_id) ==
 print("neat_sample_id should have unique values")
 print(length(unique(sample_info$neat_sample_id)) == length(sample_info$neat_sample_id))
 
-write.table(sample_info, "data/datasets/coulson/sample_info.tsv", sep='\t', row.names=FALSE, col.names=TRUE)
-write.table(expression, "data/datasets/coulson/expression.tsv", sep='\t', row.names=FALSE, col.names=TRUE)
-write.table(probe_to_gene, "data/datasets/coulson/probe_to_gene.tsv", sep='\t', row.names=FALSE, col.names=TRUE)
+write.table(sample_info, "data/datasets/coulson1/sample_info.tsv", sep='\t', row.names=FALSE, col.names=TRUE)
+write.table(expression, "data/datasets/coulson1/expression.tsv", sep='\t', row.names=FALSE, col.names=TRUE)
+write.table(probe_to_gene, "data/datasets/coulson1/probe_to_gene.tsv", sep='\t', row.names=FALSE, col.names=TRUE)

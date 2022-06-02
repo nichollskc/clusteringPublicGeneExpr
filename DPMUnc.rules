@@ -9,16 +9,16 @@ rule all:
     input:
         expand("plots/{dataset}{processing}/{signature}/trace_quantiles.png",
                processing = ["_vsn_mad_logfc", "_vsn_mad_logfc_novar"],
-               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"],
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson1"],
                signature=["signatures_v2", "signatures_v3", "ifn",
                         "nk_dipp", "exhaustion_down_wherry", "cd4_activation_green_30",
                         "cd4_activation_black_30", "cd4_activation_yellow_30"]),
-        expand("plots/{dataset}/pvals.csv",
-               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"]),
+        expand("plots/{dataset}/fisher_pvals.csv",
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson1"]),
         expand("plots/{dataset}/all_calls.rds",
-               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"]),
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson1"]),
         expand("results/{dataset}{processing}/{signature}/meanLatents.csv",
-               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"],
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson1"],
                processing = ["_vsn_mad_logfc", "_vsn_mad_logfc_novar"],
                signature=["signatures_v2", "signatures_v3", "ifn",
                         "nk_dipp", "exhaustion_down_wherry", "cd4_activation_green_30",
@@ -28,7 +28,7 @@ rule run_all:
     input:
         expand("results/{dataset}{processing}/{signature}/seed{seed}/done",
                seed=SEEDS,
-               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"],
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson1"],
                processing = ["_vsn_mad_logfc", "_vsn_mad_logfc_novar"],
                signature=["signatures_v2", "signatures_v3", "ifn",
                         "nk_dipp", "exhaustion_down_wherry", "cd4_activation_green_30",
@@ -43,10 +43,11 @@ rule run_DPMUnc:
         thinningFreq=THINFREQ,
     output:
        touch("results/{dataset}/seed{seed}/done"),
-       #"results/{dataset}/seed{seed}/alpha.csv",
-       #"results/{dataset}/seed{seed}/K.csv",
-       #"results/{dataset}/seed{seed}/clusterAllocations.csv",
-       #"results/{dataset}/seed{seed}/pLatentsGivenClusters.csv",
+       "results/{dataset}/seed{seed}/alpha.csv",
+       "results/{dataset}/seed{seed}/K.csv",
+       "results/{dataset}/seed{seed}/clusterAllocations.csv",
+       "results/{dataset}/seed{seed}/latentObservations.csv",
+       "results/{dataset}/seed{seed}/pLatentsGivenClusters.csv",
     script:
         "scripts/running_dpMix.R"
 

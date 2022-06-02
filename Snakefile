@@ -1,7 +1,7 @@
 localrules: find_signature_intersection, fetch_chaussabel, fetch_chaussabel_sample_info, fetch_coulson, fetch_coulson_sample_info, fetch_smith, fetch_smith_array, fetch_smith_sample_info
 
 wildcard_constraints:
-    dataset = "smith|chaussabelA|chaussabelB|coulson",
+    dataset = "smith|chaussabelA|chaussabelB|coulson1",
     normalisation = "\w*",
 
 ###############################################################################
@@ -114,6 +114,18 @@ rule fetch_coulson_array:
     shell:
         "wget -O {output} https://www.ebi.ac.uk/arrayexpress/files/A-AFFY-168/A-AFFY-168.adf.txt"
 
+rule standardise_coulson1:
+    input:
+        "data/datasets/coulson/HuGene-1_1-st-v1.na36.hg19.probeset.csv",
+        "data/datasets/coulson/sample_info.txt",
+        "data/datasets/coulson/ifn_signature.data_matrix.tab",
+    output:
+        "data/datasets/coulson1/sample_info.tsv",
+        "data/datasets/coulson1/probe_to_gene.tsv",
+        "data/datasets/coulson1/expression.tsv",
+    script:
+        "scripts/standardise_coulson.R"
+
 rule standardise_coulson:
     input:
         "data/datasets/coulson/HuGene-1_1-st-v1.na36.hg19.probeset.csv",
@@ -184,7 +196,7 @@ rule all_signatures:
     input:
         expand("data/datasets/{dataset}/{summary}{normalisation}-{genelist_name}.tsv",
                summary=["average_logfc", "mean_ranks"],
-               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"],
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson1"],
                normalisation=["", "_vsn", "_vsn_mad", "_mad"],
                genelist_name=["ifn", "nk_dipp", "exhaustion_down_wherry",
                    "cd4_activation_green_30", "cd4_activation_yellow_30",
@@ -193,7 +205,7 @@ rule all_signatures:
 rule compare_datasets:
     input:
         expand("data/datasets/{dataset}/{{summary}}{{normalisation}}-{{genelist_name}}.tsv",
-               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"]),
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson1"]),
     wildcard_constraints:
         summary="average_logfc|mean_ranks"
     output:
@@ -214,7 +226,7 @@ rule all_comparisons:
 rule find_signature_intersection:
     input:
         expand("data/datasets/{dataset}/logfc-{{genelist_name}}.tsv",
-               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"]),
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson1"]),
     output:
         "data/pathways/processed/intersection_{genelist_name}.csv",
     script:
@@ -232,7 +244,7 @@ rule all_comparisons_intersection:
 rule combine_datasets:
     input:
         expand("data/datasets/{dataset}/average_logfc{{normalisation}}-{genelist_name}.tsv",
-               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"],
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson1"],
                genelist_name=["ifn", "nk_dipp", "exhaustion_down_wherry",
                    "cd4_activation_green_30", "cd4_activation_yellow_30",
                    "cd4_activation_black_30"]),
@@ -268,4 +280,4 @@ rule all_datasets:
                             "cd4_activation_green_30", "cd4_activation_yellow_30",
                             "cd4_activation_black_30"],
                processing = ["_vsn_mad_logfc", "_vsn_mad_logfc_novar"],
-               dataset=["smith", "chaussabelA", "chaussabelB", "coulson"]),
+               dataset=["smith", "chaussabelA", "chaussabelB", "coulson1"]),

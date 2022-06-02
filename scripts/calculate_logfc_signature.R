@@ -16,6 +16,7 @@ calculate_average_logfc <- function(gene_means, full_dataset, sample_info, genel
         inner_join(sample_info, by="neat_sample_id") %>%
         filter(disease == "HC") %>%
         select(where(is.numeric)) %>%
+        select(-c(batch)) %>%
         summarise(across(everything(), median))
 
     logfc = data.frame(mapply('-', gene_means, hc_medians))

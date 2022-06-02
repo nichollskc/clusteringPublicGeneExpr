@@ -106,6 +106,8 @@ add_detailed_sample_info <- function(sample_df, full_ids) {
 build_sample_info <- function() {
     sample_info = read.csv("data/datasets/chaussabel/sample_info.txt", sep='\t')
     sample_info = add_detailed_sample_info(sample_info, sample_info[, "Scan.Name"])
+    sample_info$ftp = sapply(sample_info$Comment..ArrayExpress.FTP.file., function(x)
+                                 str_replace(x, "ftp://ftp.ebi.ac.uk/pub/databases/microarray/data/experiment/GEOD/E-GEOD-11907/E-GEOD-11907.raw.", ""))
     sample_info$dataset = sapply(sample_info$Derived.Array.Data.Matrix.File, function(x) {
                                  if (x == "E-GEOD-11907-processed-data-1673830054.txt") {
                                      dataset = "CHA"
@@ -118,7 +120,7 @@ build_sample_info <- function() {
                    })
     sample_info$neat_sample_id = paste0(sample_info$disease, "_", sample_info$dataset, "_", sample_info$patient_num, "_", sample_info$extra)
     sample_info$column_name = sample_info$old_sample_id
-    sample_info = sample_info[, c("neat_sample_id", "patient_id", "dataset", "extra", "disease", "column_name")]
+    sample_info = sample_info[, c("neat_sample_id", "patient_id", "dataset", "extra", "disease", "column_name", "ftp")]
 
     return (sample_info)
 }

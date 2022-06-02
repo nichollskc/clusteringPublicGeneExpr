@@ -36,7 +36,12 @@
         "time" : "8:00:00",
         "cpus-per-task" : 8
     },
-    "standardise_coulson":
+    "fisher":
+    {
+        "partition": "skylake-himem",
+        "time" : "24:00:00",
+    },
+    "standardise_coulson1":
     {
         "partition": "skylake-himem",
         "time" : "8:00:00",
