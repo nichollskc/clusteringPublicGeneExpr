@@ -36,6 +36,11 @@
         "time" : "8:00:00",
         "cpus-per-task" : 8
     },
+    "fisher_individual":
+    {
+        "partition": "skylake-himem",
+        "time" : "4:00:00",
+    },
     "fisher":
     {
         "partition": "skylake-himem",

@@ -187,6 +187,15 @@ if (! all(combined["subtype"] == combined["disease"])) {
 }
 
 print(pvals)
+
+#print("Sig and trait")
+#print(snakemake@wildcards[["signature"]])
+#print(snakemake@wildcards[["trait"]])
+#plot_props_obs(snakemake@wildcards[["signature"]],
+#               combined,
+#               snakemake@wildcards[["trait"]])
+#
+print(pvals)
 for (trait in colnames(pvals)) {
   for (signature in rownames(pvals)) {
     print(paste(trait, signature))
