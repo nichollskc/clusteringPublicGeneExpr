@@ -1,4 +1,5 @@
 library(dplyr)
+library(ggplot2)
 library(stringr)
 library(tidyr)
 library(tibble)
@@ -97,13 +98,14 @@ for(d in 1:4) {
                                 name = "K")
 }
 
+ggplot(combined, aes(x=K)) + geom_histogram() + facet_grid( method ~ .)
+ggsave("plots/K_histogram.png", width=4, height=6, units="in")
 
 plots_dir = "plots/"
 
 png(paste0(plots_dir, "/fisher_q_values.png"), width=5, height=8, units="in", res=1200)
 draw(ht_list)
 dev.off()
-
 
 png(paste0(plots_dir, "/K_heatmap.png"), width=5, height=8, units="in", res=1200)
 draw(ht_list2)
